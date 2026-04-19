@@ -1,0 +1,12 @@
+{
+  "name": "native-plant-garden-planner",
+  "version": "1.0.0",
+  "description": "Native Plant Garden Planner",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
