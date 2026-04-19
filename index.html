@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Native Plant Garden Planner</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='56'>🌿</text></svg>">
 <style>
@@ -109,17 +112,21 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 #error-banner code{font-family:monospace;font-size:11px;background:rgba(0,0,0,0.07);padding:1px 4px;border-radius:3px;}
 #tooltip{position:fixed;background:rgba(30,30,30,0.88);color:#fff;font-size:11px;padding:4px 8px;border-radius:5px;pointer-events:none;z-index:999;display:none;white-space:nowrap;}
 #loading-screen{position:fixed;inset:0;background:#f5f4f0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:12px;}
-#loading-screen p{font-size:14px;color:#5a9a40;font-weight:500;}
-#loading-screen small{font-size:12px;color:#aaa;}
+#loading-screen .ls-title{font-size:15px;color:#2d5a1b;font-weight:600;}
+#loading-screen .ls-sub{font-size:12px;color:#aaa;}
+#ls-status{font-size:12px;color:#888;min-height:18px;}
 </style>
 </head>
 <body>
 
-<!-- Loading screen shown until gardens are ready -->
 <div id="loading-screen">
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2d5a1b" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a9 9 0 0 0-4 17.1V21h8v-1.9A9 9 0 0 0 12 2z"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M12 12 Q8 8 6 4"/><path d="M12 12 Q16 8 18 4"/></svg>
-  <p>Loading your gardens…</p>
-  <small>Connecting to Google Sheets</small>
+  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2d5a1b" stroke-width="1.5" stroke-linecap="round">
+    <path d="M12 2a9 9 0 0 0-4 17.1V21h8v-1.9A9 9 0 0 0 12 2z"/>
+    <line x1="12" y1="12" x2="12" y2="21"/>
+    <path d="M12 12 Q8 8 6 4"/><path d="M12 12 Q16 8 18 4"/>
+  </svg>
+  <div class="ls-title">Native Plant Garden Planner</div>
+  <div id="ls-status">Connecting to Google Sheets…</div>
 </div>
 
 <div id="topbar">
@@ -215,13 +222,13 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycby_AjjCTA-K147C4ipkDImou46ywMKUAtXaaNG29Vqr6P9KhWMuC-uc8H0q0ovPUonTOw/exec";
+const APP_VERSION = "v4"; // bump this to bust any cached state
 
 /* ── STATE ── */
 let PLANTS = [];
-let gardens = [];           // populated async before app shows
+let gardens = [];
 let currentGarden = 0;
-let appReady = false;       // gate: nothing runs until gardens loaded
-
+let appReady = false;
 let selectedIdx = null;
 let dragPlantId = null;
 let isDraggingPlaced = false, draggingPlacedIdx = null, dragOffset = {x:0,y:0};
@@ -243,24 +250,70 @@ function px(ft){ return ft * cell(); }
 function inToPx(i){ return (i/12)*cell(); }
 function garden(){ return gardens[currentGarden]; }
 
-/* ── SAVE STATUS ── */
-function setSS(cls, txt){ const el=document.getElementById('save-status'); el.className='ss-'+cls; el.textContent=txt; }
+function lsStatus(msg){ document.getElementById('ls-status').textContent = msg; }
 
-/* ── LOAD GARDENS — must finish before app shows ── */
+/* ── VALIDATION ── */
+function isValidGarden(g){
+  return g && typeof g === 'object'
+    && typeof g.name === 'string' && g.name.trim() !== ''
+    && typeof g.w === 'number' && g.w > 0
+    && typeof g.d === 'number' && g.d > 0
+    && Array.isArray(g.placed);
+}
+
+function sanitizeGardens(raw){
+  if(!Array.isArray(raw)) return null;
+  const valid = raw.filter(isValidGarden).map(g => ({
+    name: g.name,
+    w: g.w,
+    d: g.d,
+    shape: g.shape || 'rect',
+    polygon: g.polygon || null,
+    placed: (g.placed || []).filter(p => p && p.pid && typeof p.x === 'number' && typeof p.y === 'number')
+  }));
+  return valid.length > 0 ? valid : null;
+}
+
+function defaultGarden(name='Front Bed', w=20, d=12){
+  return { name, w, d, shape:'rect', polygon:null, placed:[] };
+}
+
+/* ── SAVE STATUS ── */
+function setSS(cls, txt){
+  const el = document.getElementById('save-status');
+  el.className = 'ss-' + cls; el.textContent = txt;
+}
+
+/* ── INIT: load gardens before showing app ── */
 async function initGardens(){
-  setSS('saving','⟳ Loading gardens…');
+  lsStatus('Loading your gardens from Google Sheets…');
   try {
-    const r = await fetch(API + '?action=loadGardens');
-    const data = await r.json();
-    if(Array.isArray(data) && data.length){
-      gardens = data;
+    const url = API + '?action=loadGardens&v=' + APP_VERSION + '&t=' + Date.now();
+    const r = await fetch(url, { cache: 'no-store' });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const text = await r.text();
+    const data = JSON.parse(text);
+
+    // data could be: valid array, empty array, error object, or garbage
+    if(data && data.error){
+      throw new Error(data.error);
+    }
+
+    const clean = sanitizeGardens(data);
+    if(clean){
+      gardens = clean;
+      lsStatus('✓ Loaded ' + gardens.length + ' garden' + (gardens.length !== 1 ? 's' : ''));
     } else {
-      gardens = [defaultGarden('Front Bed', 20, 12)];
+      gardens = [defaultGarden()];
+      lsStatus('Starting fresh — no saved gardens yet');
     }
   } catch(e){
-    gardens = [defaultGarden('Front Bed', 20, 12)];
-    setSS('error','⚠ Could not reach Sheets — changes won\'t save');
+    gardens = [defaultGarden()];
+    lsStatus('Could not reach Sheets — starting with empty bed');
+    console.warn('Garden load error:', e.message);
   }
+
+  // Always show app regardless of load outcome
   appReady = true;
   document.getElementById('loading-screen').style.display = 'none';
   currentGarden = 0;
@@ -268,22 +321,25 @@ async function initGardens(){
   renderGardenList();
   renderCanvas();
   updatePlacedList();
-  setSS('saved','✓ Gardens loaded');
+  setSS('saved', '✓ Ready');
 }
 
-function defaultGarden(name, w, d){
-  return { name, w, d, shape:'rect', polygon:null, placed:[] };
-}
-
-/* ── SAVE GARDENS — GET with encoded JSON ── */
+/* ── SAVE ── */
 async function saveGardens(){
+  if(!appReady || !gardens.length) return;
+  const clean = sanitizeGardens(gardens);
+  if(!clean){ setSS('error','⚠ Nothing valid to save'); return; }
   setSS('saving','⟳ Saving…');
   try {
-    const encoded = encodeURIComponent(JSON.stringify(gardens));
-    const r = await fetch(API + '?action=saveGardens&data=' + encoded);
+    const encoded = encodeURIComponent(JSON.stringify(clean));
+    const url = API + '?action=saveGardens&v=' + APP_VERSION + '&data=' + encoded;
+    const r = await fetch(url, { cache: 'no-store' });
     const data = await r.json();
-    if(data.ok){ setSS('saved','✓ Saved'); }
-    else throw new Error(data.error || 'unknown');
+    if(data.ok){
+      setSS('saved','✓ Saved — ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
   } catch(e){
     setSS('error','⚠ Save failed: ' + e.message);
   }
@@ -296,13 +352,12 @@ function scheduleSave(){
   saveTimer = setTimeout(saveGardens, 1500);
 }
 
-/* ── PLANT SIZE PARSING ── */
+/* ── PLANT DATA ── */
 function parseSize(s){
   if(!s) return 18;
   const nums=(s.match(/([\d.]+)/g)||[]).map(Number).filter(n=>n>0);
   if(!nums.length) return 18;
-  const avg=nums.reduce((a,b)=>a+b,0)/nums.length;
-  return Math.round(avg*(s.toLowerCase().includes('ft')||s.includes("'")?12:1));
+  return Math.round(nums.reduce((a,b)=>a+b,0)/nums.length*(s.toLowerCase().includes('ft')||s.includes("'")?12:1));
 }
 
 function norm(r){
@@ -325,7 +380,6 @@ function norm(r){
   };
 }
 
-/* ── LOAD PLANTS ── */
 function setDS(type,html){ const el=document.getElementById('data-status'); el.className='data-status status-'+type; el.innerHTML=html; }
 function showErr(msg){ const el=document.getElementById('error-banner'); el.style.display='block'; el.innerHTML=msg; }
 function clearErr(){ document.getElementById('error-banner').style.display='none'; }
@@ -335,28 +389,29 @@ async function loadPlants(){
   setDS('loading','<span class="spinner"></span> Loading…');
   document.getElementById('plant-list').innerHTML='<div style="padding:14px;font-size:12px;color:#aaa;">Connecting…</div>';
   try {
-    const r = await fetch(API);
+    const url = API + '?v=' + APP_VERSION + '&t=' + Date.now();
+    const r = await fetch(url, { cache: 'no-store' });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const text = await r.text();
-    let data;
-    try { data=JSON.parse(text); } catch(e){ throw new Error('Not JSON: '+text.substring(0,100)); }
-    if(!Array.isArray(data)) throw new Error('Expected array');
-    if(!data.length) throw new Error('0 rows — check PLANT_SHEET name in Apps Script matches your tab name exactly');
+    const data = JSON.parse(text);
+    if(data && data.error) throw new Error(data.error);
+    if(!Array.isArray(data)) throw new Error('Expected array, got: ' + typeof data);
+    if(!data.length) throw new Error('0 rows returned. Check PLANT_SHEET name in Apps Script matches your tab exactly.');
     PLANTS = data.map(norm).filter(p=>p.id&&p.name);
     setDS('ok','✓ '+PLANTS.length+' plants');
     renderPlantList();
   } catch(e){
     setDS('err','⚠ Error');
-    showErr('<strong>Plant load failed.</strong><br><code>'+e.message+'</code><br><br>Check the <strong>PLANT_SHEET</strong> name in your Apps Script matches your sheet tab exactly, and "Who has access" = <strong>Anyone</strong>.');
+    showErr('<strong>Plant load failed.</strong><br><code>'+e.message+'</code><br><br>Check the <strong>PLANT_SHEET</strong> name in your Apps Script matches your tab exactly, and "Who has access" = <strong>Anyone</strong>.');
     PLANTS=[]; renderPlantList();
   }
 }
 
 /* ── TOOLS ── */
 const hints={
-  place:'Drag a plant from the palette onto the bed · Click placed plant to select · Delete to remove',
+  place:'Drag a plant from the palette onto the bed · Click a placed plant to select it · Delete key to remove',
   rect:'Click and drag on the canvas to draw a rectangular bed boundary',
-  poly:'Click to add corner points · Double-click or click the first point to close · Esc to cancel',
+  poly:'Click to add corner points · Double-click or click first point to close · Esc to cancel',
   edit:'Drag the white corner handles to reshape the bed boundary'
 };
 function setTool(t){
@@ -368,7 +423,7 @@ function setTool(t){
   renderCanvas();
 }
 
-/* ── SYNC INPUTS ── */
+/* ── INPUTS ── */
 function syncInputs(){
   const g=garden(); if(!g) return;
   document.getElementById('bed-name-input').value=g.name;
@@ -380,9 +435,10 @@ function syncInputs(){
 function renderGardenList(){
   const el=document.getElementById('garden-list'); el.innerHTML='';
   gardens.forEach((g,i)=>{
+    if(!isValidGarden(g)) return; // skip any corrupt entry in display
     const row=document.createElement('div');
     row.className='garden-row'+(i===currentGarden?' active':'');
-    const cnt=g.placed?g.placed.length:0;
+    const cnt=g.placed.length;
     row.innerHTML=`<div class="garden-dot"></div>
       <div class="garden-row-name" title="${g.name}">${g.name}${g.shape==='poly'?' ⬡':''}</div>
       <div class="garden-row-meta">${g.w}×${g.d}ft${cnt?' · '+cnt+'p':''}</div>
@@ -409,16 +465,16 @@ function addGarden(){
 
 function deleteGarden(e,i){
   e.stopPropagation();
-  if(gardens.length===1){alert("Need at least one bed.");return;}
+  if(gardens.filter(isValidGarden).length<=1){alert("Need at least one bed.");return;}
   if(!confirm('Delete "'+gardens[i].name+'" and all its plants?')) return;
   gardens.splice(i,1);
-  if(currentGarden>=gardens.length) currentGarden=gardens.length-1;
+  if(currentGarden>=gardens.length) currentGarden=Math.max(0,gardens.length-1);
   switchGarden(currentGarden); scheduleSave();
 }
 
 function applyBedSettings(){
   if(!appReady) return;
-  const g=garden();
+  const g=garden(); if(!g) return;
   g.name=document.getElementById('bed-name-input').value||g.name;
   g.w=parseInt(document.getElementById('bed-w').value)||g.w;
   g.d=parseInt(document.getElementById('bed-d').value)||g.d;
@@ -436,11 +492,11 @@ function pointInPoly(ptx,pty,poly){
   return inside;
 }
 function rectPoly(g){return [{x:0,y:0},{x:px(g.w),y:0},{x:px(g.w),y:px(g.d)},{x:0,y:px(g.d)}];}
-function activePoly(){const g=garden();return(g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);}
+function activePoly(){const g=garden();return(g&&g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);}
 
 /* ── RENDER ── */
 function renderCanvas(){
-  if(!appReady||!garden()) return;
+  if(!appReady||!garden()||!isValidGarden(garden())) return;
   const g=garden();
   const W=Math.round(px(g.w)), H=Math.round(px(g.d));
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
@@ -451,7 +507,6 @@ function renderCanvas(){
   const poly=activePoly();
   ctx.fillStyle='#f5f4f0'; ctx.fillRect(0,0,W,H);
 
-  /* clipped garden area */
   ctx.save();
   ctx.beginPath(); poly.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.clip();
   ctx.fillStyle='#e8f5e0'; ctx.fillRect(0,0,W,H);
@@ -460,26 +515,21 @@ function renderCanvas(){
   for(let y=0;y<=H;y+=c){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
   ctx.restore();
 
-  /* bed outline */
   ctx.beginPath(); poly.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath();
   ctx.strokeStyle='#2d5a1b'; ctx.lineWidth=2.5; ctx.stroke();
 
-  /* rulers */
   const fs=Math.max(8,Math.min(11,c*0.75));
   ctx.fillStyle='#5a9a40'; ctx.font=`${fs}px sans-serif`;
   const step=zoom<0.5?5:zoom<0.8?2:1;
-  for(let x=0;x<=g.w;x+=step){if(px(x)+12<W||x===0) ctx.fillText(x+"'",px(x)+2,fs+1);}
-  for(let y=0;y<=g.d;y+=step){if(px(y)+fs<H||y===0) ctx.fillText(y+"'",2,px(y)+fs+1);}
+  for(let x=0;x<=g.w;x+=step){if(px(x)+12<W||x===0)ctx.fillText(x+"'",px(x)+2,fs+1);}
+  for(let y=0;y<=g.d;y+=step){if(px(y)+fs<H||y===0)ctx.fillText(y+"'",2,px(y)+fs+1);}
 
-  /* in-progress rect */
   if(activeTool==='rect'&&isDrawingRect&&rectStart){
     const mx=mousePos.x,my=mousePos.y;
     ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
     ctx.strokeRect(Math.min(rectStart.x,mx),Math.min(rectStart.y,my),Math.abs(mx-rectStart.x),Math.abs(my-rectStart.y));
     ctx.setLineDash([]);
   }
-
-  /* in-progress polygon */
   if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length){
     ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
     ctx.beginPath(); polyPoints.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
@@ -491,8 +541,6 @@ function renderCanvas(){
     });
     if(polyPoints.length>2){ctx.beginPath();ctx.arc(polyPoints[0].x,polyPoints[0].y,9,0,Math.PI*2);ctx.strokeStyle='rgba(45,90,27,0.4)';ctx.lineWidth=2;ctx.stroke();}
   }
-
-  /* edit handles */
   if(activeTool==='edit'){
     const verts=(g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);
     verts.forEach((p,i)=>{
@@ -502,8 +550,7 @@ function renderCanvas(){
     });
   }
 
-  /* plants */
-  (g.placed||[]).forEach((item,idx)=>{
+  g.placed.forEach((item,idx)=>{
     const p=PLANTS.find(x=>x.id===item.pid); if(!p) return;
     const cx=item.x,cy=item.y,r=Math.max(6,inToPx(p.wide/2)),sr=r*1.35,sel=idx===selectedIdx;
     ctx.beginPath();ctx.arc(cx,cy,sr,0,Math.PI*2);ctx.fillStyle='rgba(45,90,27,0.07)';ctx.fill();
@@ -519,17 +566,13 @@ function renderCanvas(){
     else ctx.fillText(words[0],cx,cy);
   });
   ctx.textAlign='left';ctx.textBaseline='alphabetic';
-
-  const cnt=(g.placed||[]).length;
+  const cnt=g.placed.length;
   document.getElementById('plant-count').textContent=cnt+' plant'+(cnt!==1?'s':'')+' placed';
   renderGardenList();
 }
 
 /* ── COORDS ── */
-function coords(e){
-  const r=canvas.getBoundingClientRect();
-  return{x:(e.clientX-r.left)*(canvas.width/PR/r.width),y:(e.clientY-r.top)*(canvas.height/PR/r.height)};
-}
+function coords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(canvas.width/PR/r.width),y:(e.clientY-r.top)*(canvas.height/PR/r.height)};}
 
 /* ── MOUSE ── */
 canvas.addEventListener('mousemove',e=>{
@@ -552,8 +595,8 @@ canvas.addEventListener('mousemove',e=>{
     canvas.style.cursor=verts.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8)>=0?'grab':'default';
   }
   const tip=document.getElementById('tooltip');
-  for(let i=(garden().placed||[]).length-1;i>=0;i--){
-    const item=garden().placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p) continue;
+  for(let i=garden().placed.length-1;i>=0;i--){
+    const item=garden().placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
     if(Math.hypot(x-item.x,y-item.y)<=Math.max(6,inToPx(p.wide/2))+6){
       tip.style.display='block';tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-10)+'px';
       tip.textContent=p.name+(p.bloom?' · '+p.bloom:'')+(p.sun?' · '+p.sun:'');return;
@@ -572,9 +615,9 @@ canvas.addEventListener('mousedown',e=>{
   }
   if(activeTool==='rect'){isDrawingRect=true;rectStart={x,y};return;}
   if(activeTool==='poly') return;
-  const placed=garden().placed||[];
+  const placed=garden().placed;
   for(let i=placed.length-1;i>=0;i--){
-    const item=placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p) continue;
+    const item=placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
     if(Math.hypot(x-item.x,y-item.y)<=Math.max(6,inToPx(p.wide/2))+6){
       selectedIdx=i;isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x,y:y-item.y};
       showPlantInfo(item.pid);renderCanvas();return;
@@ -608,9 +651,7 @@ canvas.addEventListener('click',e=>{
   polyPoints.push({x,y});renderCanvas();
 });
 
-canvas.addEventListener('dblclick',e=>{
-  if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length>=3) finishPoly();
-});
+canvas.addEventListener('dblclick',e=>{if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length>=3)finishPoly();});
 
 function finishPoly(){
   if(polyPoints.length<3){polyPoints=[];isDrawingPoly=false;renderCanvas();return;}
@@ -624,7 +665,6 @@ canvas.addEventListener('drop',e=>{
   e.preventDefault();
   const{x,y}=coords(e);
   if(!pointInPoly(x,y,activePoly())) return;
-  if(!garden().placed) garden().placed=[];
   garden().placed.push({pid:dragPlantId,x,y});
   selectedIdx=garden().placed.length-1;
   showPlantInfo(dragPlantId);renderCanvas();updatePlacedList();scheduleSave();
@@ -634,10 +674,9 @@ canvas.addEventListener('mouseleave',()=>{isDraggingPlaced=false;draggingPlacedI
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){polyPoints=[];isDrawingPoly=false;isDrawingRect=false;rectStart=null;renderCanvas();return;}
-  if((e.key==='Delete'||e.key==='Backspace')&&selectedIdx!==null){
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedIdx!==null&&appReady){
     const a=document.activeElement;
     if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')) return;
-    if(!appReady) return;
     garden().placed.splice(selectedIdx,1);selectedIdx=null;renderCanvas();updatePlacedList();scheduleSave();
   }
 });
@@ -670,10 +709,7 @@ function renderPlantList(){
   if(!PLANTS.length){list.innerHTML='<div style="padding:14px;font-size:12px;color:#aaa;">No plants loaded.</div>';return;}
   const filtered=PLANTS.filter(p=>{
     const s=p.sun.toLowerCase();
-    const ms=sunFilter==='all'
-      ||(sunFilter==='full sun'&&s.includes('full sun')&&!s.includes('part'))
-      ||(sunFilter==='part'&&s.includes('part'))
-      ||(sunFilter==='shade'&&s.includes('shade')&&!s.includes('part')&&!s.includes('sun'));
+    const ms=sunFilter==='all'||(sunFilter==='full sun'&&s.includes('full sun')&&!s.includes('part'))||(sunFilter==='part'&&s.includes('part'))||(sunFilter==='shade'&&s.includes('shade')&&!s.includes('part')&&!s.includes('sun'));
     return ms&&(!q||p.name.toLowerCase().includes(q)||p.sci.toLowerCase().includes(q));
   });
   list.innerHTML='';
@@ -698,8 +734,9 @@ function setFilter(f,btn){
 }
 
 function updatePlacedList(){
+  const g=garden();
   const counts={};
-  (garden()&&garden().placed||[]).forEach(item=>{counts[item.pid]=(counts[item.pid]||0)+1;});
+  (g&&g.placed||[]).forEach(item=>{counts[item.pid]=(counts[item.pid]||0)+1;});
   const el=document.getElementById('placed-summary');
   if(!Object.keys(counts).length){el.innerHTML='<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>';return;}
   el.innerHTML=Object.entries(counts).map(([pid,cnt])=>{
@@ -709,7 +746,7 @@ function updatePlacedList(){
 }
 
 function showPlantInfo(pid){
-  const p=PLANTS.find(x=>x.id===pid);if(!p) return;
+  const p=PLANTS.find(x=>x.id===pid);if(!p)return;
   const fmt=i=>i>=12?(i/12).toFixed(1).replace('.0','')+"'":i+'"';
   document.getElementById('plant-detail').innerHTML=`
     ${p.img?`<img class="pd-img" src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:'' }
@@ -734,13 +771,13 @@ function clearGarden(){
 
 function exportPNG(){
   const link=document.createElement('a');
-  link.download=garden().name.replace(/\s+/g,'-')+'-plan.png';
+  link.download=(garden()?garden().name:'garden').replace(/\s+/g,'-')+'-plan.png';
   link.href=canvas.toDataURL('image/png');link.click();
 }
 
-/* ── INIT: load gardens first, plants in parallel ── */
-initGardens();   // shows loading screen until done, then reveals app
-loadPlants();    // runs in parallel — plants load into palette as they arrive
+/* ── BOOT ── */
+initGardens();
+loadPlants();
 </script>
 </body>
 </html>
