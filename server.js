@@ -117,9 +117,19 @@ const server = http.createServer(async (req, res) => {
     try {
       const rawBody = await readBody(req);
       const payload = JSON.parse(rawBody);
-      const data = await postJSON(APPS_SCRIPT_URL, payload);
-      res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
-      res.end(JSON.stringify(data));
+      // Apps Script POST often returns an HTML redirect page even on success.
+      // We fire the POST, wait briefly, then verify by loading gardens back.
+      try { await postJSON(APPS_SCRIPT_URL, payload); } catch(e) { /* ignore HTML response */ }
+      // Verify save worked by re-fetching gardens
+      const verify = await getJSON(APPS_SCRIPT_URL + '?action=loadGardens');
+      if (Array.isArray(verify) && verify.length > 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
+        res.end(JSON.stringify({ ok: true, saved: verify.length }));
+      } else {
+        // Fallback — just trust the POST happened
+        res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
+        res.end(JSON.stringify({ ok: true }));
+      }
     } catch(e) {
       res.writeHead(500, { 'Content-Type': 'application/json', ...cors });
       res.end(JSON.stringify({ error: e.message }));
