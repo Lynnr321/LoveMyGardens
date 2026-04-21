@@ -48,9 +48,8 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 .garden-row-name{flex:1;font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .garden-row.active .garden-row-name{color:#1a4a0a;font-weight:500;}
 .garden-row-meta{font-size:10px;color:#aaa;white-space:nowrap;}
-.garden-del{width:16px;height:16px;border:none;background:none;cursor:pointer;color:#ccc;font-size:14px;line-height:1;padding:0;display:none;align-items:center;justify-content:center;}
-.garden-row:hover .garden-del{display:flex;}
-.garden-del:hover{color:#a32d2d;}
+.garden-del{width:18px;height:18px;border:none;background:none;cursor:pointer;color:#ccc;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0;}
+.garden-del:hover{color:#fff;background:#e24b4a;}
 #plants-section{display:flex;flex-direction:column;flex:1;overflow:hidden;}
 #plants-header{padding:8px 12px 6px;border-bottom:1px solid #e0dfd8;flex-shrink:0;}
 #plants-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
@@ -466,8 +465,12 @@ function pointInPoly(ptx,pty,poly){
   }
   return inside;
 }
-function rectPoly(g){return [{x:0,y:0},{x:px(g.w),y:0},{x:px(g.w),y:px(g.d)},{x:0,y:px(g.d)}];}
-function activePoly(){const g=garden();return(g&&g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);}
+// Polygons stored in FEET. Convert to pixels only for drawing/hit-testing.
+function rectPolyFt(g){return [{x:0,y:0},{x:g.w,y:0},{x:g.w,y:g.d},{x:0,y:g.d}];}
+function activePolyFt(){const g=garden();return(g&&g.shape==='poly'&&g.polygon)?g.polygon:rectPolyFt(g);}
+function polyToPx(poly){return poly.map(p=>({x:px(p.x),y:px(p.y)}));}
+function rectPoly(g){return polyToPx(rectPolyFt(g));}
+function activePoly(){return polyToPx(activePolyFt());}
 
 function renderCanvas(){
   if(!appReady||!garden()||!isValidGarden(garden())) return;
@@ -520,7 +523,7 @@ function renderCanvas(){
   }
   (g.placed||[]).forEach((item,idx)=>{
     const p=PLANTS.find(x=>x.id===item.pid); if(!p) return;
-    const cx=item.x,cy=item.y,r=Math.max(6,inToPx(p.wide/2)),sr=r*1.35,sel=idx===selectedIdx;
+    const cx=px(item.x),cy=px(item.y),r=Math.max(6,inToPx(p.wide/2)),sr=r*1.35,sel=idx===selectedIdx;
     ctx.beginPath();ctx.arc(cx,cy,sr,0,Math.PI*2);ctx.fillStyle='rgba(45,90,27,0.07)';ctx.fill();
     ctx.strokeStyle='#7ab55a';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
     ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
@@ -545,25 +548,27 @@ canvas.addEventListener('mousemove',e=>{
   if(!appReady) return;
   const{x,y}=coords(e); mousePos={x,y};
   if(isDraggingVertex&&editingVertexIdx!==null){
-    const g=garden(),verts=(g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);
-    verts[editingVertexIdx]={x,y};
-    if(g.shape==='rect'){g.shape='poly';g.polygon=verts;}
+    const g=garden();
+    const vertsFt=(g.shape==='poly'&&g.polygon)?g.polygon:rectPolyFt(g);
+    vertsFt[editingVertexIdx]={x:x/cell(),y:y/cell()};
+    if(g.shape==='rect'){g.shape='poly';g.polygon=vertsFt;}
     renderCanvas();return;
   }
   if(isDraggingPlaced&&draggingPlacedIdx!==null){
-    garden().placed[draggingPlacedIdx].x=x-dragOffset.x;
-    garden().placed[draggingPlacedIdx].y=y-dragOffset.y;
+    const c=cell();
+    garden().placed[draggingPlacedIdx].x=(x-dragOffset.x)/c;
+    garden().placed[draggingPlacedIdx].y=(y-dragOffset.y)/c;
     renderCanvas();return;
   }
   if((activeTool==='poly'&&isDrawingPoly)||(activeTool==='rect'&&isDrawingRect)){renderCanvas();return;}
   if(activeTool==='edit'){
-    const g=garden(),verts=(g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);
-    canvas.style.cursor=verts.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8)>=0?'grab':'default';
+    const vertsHit=activePoly();
+    canvas.style.cursor=vertsHit.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8)>=0?'grab':'default';
   }
   const tip=document.getElementById('tooltip');
   for(let i=(garden().placed||[]).length-1;i>=0;i--){
     const item=garden().placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
-    if(Math.hypot(x-item.x,y-item.y)<=Math.max(6,inToPx(p.wide/2))+6){
+    if(Math.hypot(x-px(item.x),y-px(item.y))<=Math.max(6,inToPx(p.wide/2))+6){
       tip.style.display='block';tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-10)+'px';
       tip.textContent=p.name+(p.bloom?' · '+p.bloom:'')+(p.sun?' · '+p.sun:'');return;
     }
@@ -575,8 +580,8 @@ canvas.addEventListener('mousedown',e=>{
   if(!appReady) return;
   const{x,y}=coords(e);
   if(activeTool==='edit'){
-    const g=garden(),verts=(g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);
-    const hit=verts.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8);
+    const vertsHit=activePoly();
+    const hit=vertsHit.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8);
     if(hit>=0){editingVertexIdx=hit;isDraggingVertex=true;canvas.style.cursor='grabbing';return;}
   }
   if(activeTool==='rect'){isDrawingRect=true;rectStart={x,y};return;}
@@ -584,8 +589,8 @@ canvas.addEventListener('mousedown',e=>{
   const placed=garden().placed||[];
   for(let i=placed.length-1;i>=0;i--){
     const item=placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
-    if(Math.hypot(x-item.x,y-item.y)<=Math.max(6,inToPx(p.wide/2))+6){
-      selectedIdx=i;isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x,y:y-item.y};
+    if(Math.hypot(x-px(item.x),y-px(item.y))<=Math.max(6,inToPx(p.wide/2))+6){
+      const c=cell(); selectedIdx=i;isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c,y:y-item.y*c};
       showPlantInfo(item.pid);renderCanvas();return;
     }
   }
@@ -602,7 +607,8 @@ canvas.addEventListener('mouseup',e=>{
     const rw=Math.abs(x-rectStart.x),rh=Math.abs(y-rectStart.y);
     if(rw>10&&rh>10){
       const g=garden();g.shape='poly';
-      g.polygon=[{x:Math.min(rectStart.x,x),y:Math.min(rectStart.y,y)},{x:Math.max(rectStart.x,x),y:Math.min(rectStart.y,y)},{x:Math.max(rectStart.x,x),y:Math.max(rectStart.y,y)},{x:Math.min(rectStart.x,x),y:Math.max(rectStart.y,y)}];
+      const c=cell();
+      g.polygon=[{x:Math.min(rectStart.x,x)/c,y:Math.min(rectStart.y,y)/c},{x:Math.max(rectStart.x,x)/c,y:Math.min(rectStart.y,y)/c},{x:Math.max(rectStart.x,x)/c,y:Math.max(rectStart.y,y)/c},{x:Math.min(rectStart.x,x)/c,y:Math.max(rectStart.y,y)/c}];
       renderCanvas();scheduleSave();
     }
     rectStart=null;
@@ -621,7 +627,9 @@ canvas.addEventListener('dblclick',e=>{if(activeTool==='poly'&&isDrawingPoly&&po
 
 function finishPoly(){
   if(polyPoints.length<3){polyPoints=[];isDrawingPoly=false;renderCanvas();return;}
-  const g=garden();g.shape='poly';g.polygon=[...polyPoints];
+  const g=garden();g.shape='poly';
+  const c=cell();
+  g.polygon=polyPoints.map(p=>({x:p.x/c,y:p.y/c}));
   polyPoints=[];isDrawingPoly=false;renderCanvas();scheduleSave();
 }
 
@@ -632,7 +640,7 @@ canvas.addEventListener('drop',e=>{
   const{x,y}=coords(e);
   if(!pointInPoly(x,y,activePoly())) return;
   if(!garden().placed) garden().placed=[];
-  garden().placed.push({pid:dragPlantId,x,y});
+  const c=cell(); garden().placed.push({pid:dragPlantId,x:x/c,y:y/c});
   selectedIdx=garden().placed.length-1;
   showPlantInfo(dragPlantId);renderCanvas();updatePlacedList();scheduleSave();
 });
