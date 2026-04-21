@@ -314,8 +314,12 @@ async function saveGardens(){
   if(!clean){ setSS('error','⚠ Nothing valid to save'); return; }
   setSS('saving','⟳ Saving…');
   try {
-    const encoded = encodeURIComponent(JSON.stringify(clean));
-    const data = await jsonp(API + '?action=saveGardens&data=' + encoded);
+    const resp = await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveGardens', gardens: clean })
+    });
+    const data = await resp.json();
     if(data && data.ok){
       setSS('saved','✓ Saved ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
     } else {
