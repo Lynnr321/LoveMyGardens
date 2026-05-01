@@ -1,7 +1,7 @@
 {
-  "name": "native-plant-garden-planner",
+  "name": "my-native-garden-planner",
   "version": "1.0.0",
-  "description": "Native Plant Garden Planner",
+  "description": "My Native Garden Planner",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
