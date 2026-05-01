@@ -298,8 +298,7 @@ el=document.getElementById('save-status'); el.className='ss-'+cls;
 el.textContent=txt; }
 
 /* ── INIT ── */
-async function initGardens(){ lsStatus('Loading your gardens from Google
-Sheets…'); try { const data = await jsonp(API + '?action=loadGardens');
+async function initGardens(){ lsStatus('Loading your gardens from Google Sheets...'); try { const data = await jsonp(API + '?action=loadGardens');
 if(data && data.error) throw new Error(data.error); const clean =
 sanitizeGardens(data); if(clean){ gardens = clean; lsStatus('✓ Loaded '
 + gardens.length + ' garden' + (gardens.length !== 1 ? 's' : '')); }
