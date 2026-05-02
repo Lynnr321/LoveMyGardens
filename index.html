@@ -98,7 +98,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 .pd-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0efe8;font-size:12px;}
 .pd-label{color:#888;}
 .pd-val{color:#333;font-weight:500;text-align:right;max-width:120px;}
-.pd-desc{margin-top:8px;font-size:11px;color:#666;line-height:1.5;}
+.pd-desc{margin-top:10px;padding-top:10px;border-top:1px solid #e8e8e8;font-size:12px;color:#555;line-height:1.6;font-style:italic;}
 #placed-list{margin-top:14px;}
 #placed-list h3{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
 .placed-item{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;border-bottom:1px solid #f0efe8;}
@@ -737,7 +737,7 @@ function showPlantInfo(pid){
     <div class="pd-row"><span class="pd-label">Spread</span><span class="pd-val">${p.spread}</span></div>
     <div class="pd-row"><span class="pd-label">Roots</span><span class="pd-val">${p.root}</span></div>
     <div class="pd-row"><span class="pd-label">Propagation</span><span class="pd-val">${p.propagation||'—'}</span></div>
-    <div class="pd-desc">${p.desc}</div>`;
+    ${p.desc?`<div class="pd-desc">${p.desc}</div>`:''}`;
 }
 
 function clearGarden(){
