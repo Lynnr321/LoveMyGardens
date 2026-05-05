@@ -34,7 +34,6 @@ function getJSON(targetUrl) {
 function postJSON(targetUrl, payload) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify(payload);
-
     function follow(u, hops) {
       if (hops > 10) return reject(new Error('Too many redirects'));
       const isHttps = u.startsWith('https');
@@ -97,7 +96,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  /* GET proxy — plants and loadGardens */
+  /* GET proxy — plants and loadGardens (now userId-aware) */
   if (parsed.pathname === '/api' && req.method === 'GET') {
     try {
       const params = new url.URLSearchParams(parsed.query).toString();
@@ -112,13 +111,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  /* POST proxy — saveGardens */
+  /* POST proxy — saveGardens (now userId-aware) */
   if (parsed.pathname === '/api' && req.method === 'POST') {
     try {
       const rawBody = await readBody(req);
       const payload = JSON.parse(rawBody);
-      try { await postJSON(APPS_SCRIPT_URL, payload); } catch(e) { /* ignore HTML response */ }
-      const verify = await getJSON(APPS_SCRIPT_URL + '?action=loadGardens');
+
+      // Validate userId is present
+      if (!payload.userId) {
+        res.writeHead(400, { 'Content-Type': 'application/json', ...cors });
+        return res.end(JSON.stringify({ error: 'userId required' }));
+      }
+
+      // Forward to Apps Script
+      try { await postJSON(APPS_SCRIPT_URL, payload); } catch(e) { /* ignore HTML redirect response */ }
+
+      // Verify save by re-fetching this user's gardens
+      const verifyUrl = APPS_SCRIPT_URL + '?action=loadGardens&userId=' + encodeURIComponent(payload.userId);
+      const verify = await getJSON(verifyUrl);
       if (Array.isArray(verify) && verify.length > 0) {
         res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
         res.end(JSON.stringify({ ok: true, saved: verify.length }));
@@ -135,7 +145,11 @@ const server = http.createServer(async (req, res) => {
 
   /* OPTIONS preflight */
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { ...cors, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
+    res.writeHead(204, {
+      ...cors,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
     return res.end();
   }
 
