@@ -955,7 +955,7 @@ function exportPNG(){
 
 // Auth handles initGardens() and loadPlants() calls
 
-// Expose auth functions to global scope (required for onclick= attributes with type="module")
+// Expose ALL functions to global scope (required for onclick= attributes with type="module")
 window.doLogin = doLogin;
 window.doSignup = doSignup;
 window.doGoogleLogin = doGoogleLogin;
@@ -964,6 +964,16 @@ window.doSignOut = doSignOut;
 window.showLogin = showLogin;
 window.showSignup = showSignup;
 window.showForgot = showForgot;
+window.addGarden = addGarden;
+window.deleteGarden = deleteGarden;
+window.clearGarden = clearGarden;
+window.applyBedSettings = applyBedSettings;
+window.changeZoom = changeZoom;
+window.fitZoom = fitZoom;
+window.exportPNG = exportPNG;
+window.loadPlants = loadPlants;
+window.setFilter = setFilter;
+window.setTool = setTool;
 
 </script>
 </body>
