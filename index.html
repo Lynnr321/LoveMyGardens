@@ -605,7 +605,7 @@ const hints={
   place:'Drag a plant from the palette onto the bed · Click placed plant to select · Delete to remove',
   rect:'Click and drag on the canvas to draw a rectangular bed boundary',
   poly:'Click to add corner points · Double-click or click first point to close · Esc to cancel',
-  edit:'Drag the white corner handles to reshape the bed boundary'
+  edit:'Drag white handles to reshape · Double-click edge to add point · Right-click point to remove'
 };
 function setTool(t){
   activeTool=t; polyPoints=[]; isDrawingPoly=false; isDrawingRect=false; rectStart=null;
@@ -736,15 +736,11 @@ function renderCanvas(){
       ctx.fillStyle=i===editingVertexIdx?'#cc9900':'#fff';ctx.fill();
       ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.stroke();
     });
-    // Draw midpoint hints on edges (click to add point)
+    // Show hint text for adding points
     if(g.shape==='poly'&&g.polygon){
-      verts.forEach((p,i)=>{
-        const b=verts[(i+1)%verts.length];
-        const mx=(p.x+b.x)/2, my=(p.y+b.y)/2;
-        ctx.beginPath();ctx.arc(mx,my,4,0,Math.PI*2);
-        ctx.fillStyle='rgba(45,90,27,0.3)';ctx.fill();
-        ctx.strokeStyle='#2d5a1b';ctx.lineWidth=1;ctx.stroke();
-      });
+      ctx.fillStyle='rgba(45,90,27,0.6)';ctx.font='11px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('Double-click an edge to add a point · Right-click a point to remove it',canvas.width/2,14);
     }
   }
   (g.placed||[]).forEach((item,idx)=>{
@@ -891,30 +887,6 @@ canvas.addEventListener('mousedown',e=>{
     // Check if clicking an existing vertex
     const hit=vertsHit.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8);
     if(hit>=0){editingVertexIdx=hit;isDraggingVertex=true;canvas.style.cursor='grabbing';return;}
-    // Check if clicking on an edge — insert new point
-    const g=garden();
-    if(g.shape==='poly'&&g.polygon){
-      const verts=g.polygon;
-      for(let i=0;i<verts.length;i++){
-        const a=verts[i], b=verts[(i+1)%verts.length];
-        // Distance from point to line segment
-        const dx=b.x-a.x, dy=b.y-a.y;
-        const len2=dx*dx+dy*dy;
-        if(len2===0) continue;
-        const t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/len2));
-        const nx=a.x+t*dx, ny=a.y+t*dy;
-        if(Math.hypot(x-nx,y-ny)<=8){
-          // Insert new vertex after index i
-          const newPt={x:nx/cell(),y:ny/cell()};
-          verts.splice(i+1,0,{x:nx,y:ny});
-          editingVertexIdx=i+1;
-          isDraggingVertex=true;
-          canvas.style.cursor='grabbing';
-          renderCanvas();
-          return;
-        }
-      }
-    }
   }
   if(activeTool==='rect'){isDrawingRect=true;rectStart={x,y};return;}
   if(activeTool==='poly') return;
@@ -979,7 +951,31 @@ canvas.addEventListener('click',e=>{
   polyPoints.push({x,y});renderCanvas();
 });
 
-canvas.addEventListener('dblclick',e=>{if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length>=3)finishPoly();});
+canvas.addEventListener('dblclick',e=>{
+  if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length>=3){finishPoly();return;}
+  // Double-click on edge in edit mode = add new point
+  if(activeTool==='edit'){
+    const rect=canvas.getBoundingClientRect();
+    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    const g=garden();
+    if(!g||g.shape!=='poly'||!g.polygon) return;
+    const verts=g.polygon;
+    for(let i=0;i<verts.length;i++){
+      const a=verts[i], b=verts[(i+1)%verts.length];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const len2=dx*dx+dy*dy;
+      if(len2===0) continue;
+      const t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/len2));
+      const nx=a.x+t*dx, ny=a.y+t*dy;
+      if(Math.hypot(x-nx,y-ny)<=10){
+        verts.splice(i+1,0,{x:nx,y:ny});
+        editingVertexIdx=i+1;
+        renderCanvas();
+        return;
+      }
+    }
+  }
+});
 
 function finishPoly(){
   if(polyPoints.length<3){polyPoints=[];isDrawingPoly=false;renderCanvas();return;}
@@ -1116,11 +1112,11 @@ function addSpacer(){
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input id="spacer-custom" placeholder="e.g. Compost bin" style="flex:1;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
     </div>
-    <div style="font-size:11px;color:#888;margin-bottom:6px;">Size (feet):</div>
+    <div style="font-size:11px;color:#888;margin-bottom:6px;">Size (feet):  W = Width · L = Length</div>
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
       <label style="font-size:12px;">W</label>
       <input id="spacer-w" type="number" value="8" min="1" max="100" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
-      <label style="font-size:12px;">H</label>
+      <label style="font-size:12px;">L</label>
       <input id="spacer-h" type="number" value="8" min="1" max="100" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
       <label style="font-size:12px;">Rotate°</label>
       <input id="spacer-r" type="number" value="0" min="-180" max="180" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
