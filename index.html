@@ -199,6 +199,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
   <div class="tb-sep"></div>
   <button class="tb-btn" onclick="loadPlants()">↺ Reload plants</button>
   <button class="tb-btn" onclick="exportPNG()">Export PNG</button>
+  <button class="tb-btn" onclick="cleanupStacked()" title="Remove plants piled at position 0,0">Clean up</button>
   <button class="tb-btn danger" onclick="clearGarden()">Clear bed</button>
   <div id="spacer"></div>
   <span id="save-status" class="ss-idle">Ready</span>
@@ -443,6 +444,7 @@ let appReady = false;
 let selectedIdx = null;
 let dragPlantId = null;
 let isDraggingPlaced = false, draggingPlacedIdx = null, dragOffset = {x:0,y:0};
+let isRotatingSpacер = false, rotatingSpacerIdx = null, rotateStartX = 0, rotateStartAngle = 0;
 let sunFilter = 'all';
 let zoom = 1.0;
 let activeTool = 'place';
@@ -751,20 +753,35 @@ function renderCanvas(){
       const cx=px(item.x), cy=px(item.y);
       const sw=px(item.w||4), sh=px(item.h||4);
       const sel=idx===selectedIdx;
+      const rot=(item.rotation||0)*Math.PI/180;
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(rot);
       ctx.fillStyle=item.color||'#999';
       ctx.globalAlpha=0.35;
-      ctx.fillRect(cx-sw/2,cy-sh/2,sw,sh);
+      ctx.fillRect(-sw/2,-sh/2,sw,sh);
       ctx.globalAlpha=1;
       ctx.strokeStyle=sel?'#cc9900':(item.color||'#999');
       ctx.lineWidth=sel?2.5:1.5;
       if(sel) ctx.setLineDash([4,3]);
-      ctx.strokeRect(cx-sw/2,cy-sh/2,sw,sh);
+      ctx.strokeRect(-sw/2,-sh/2,sw,sh);
       ctx.setLineDash([]);
-      const lfs=Math.max(8,Math.min(12,sw*0.25));
+      const lfs=Math.max(8,Math.min(13,sw*0.22));
       ctx.fillStyle='#333';ctx.font=`600 ${lfs}px sans-serif`;
       ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(item.label||'',cx,cy);
-      if(item.locked){ctx.font=`${lfs}px sans-serif`;ctx.fillText('🔒',cx,cy-sh/2-8);}
+      ctx.fillText(item.label||'',0,0);
+      if(item.locked){ctx.font=`${lfs}px sans-serif`;ctx.fillText('🔒',0,-sh/2-8);}
+      // Draw rotation handle when selected
+      if(sel){
+        ctx.strokeStyle='#cc9900';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(0,-sh/2);ctx.lineTo(0,-sh/2-16);ctx.stroke();
+        ctx.beginPath();ctx.arc(0,-sh/2-20,5,0,Math.PI*2);
+        ctx.fillStyle='#cc9900';ctx.fill();
+        // Show rotation label
+        ctx.fillStyle='#cc9900';ctx.font='10px sans-serif';
+        ctx.fillText((item.rotation||0)+'°',sw/2+4,-sh/2);
+      }
+      ctx.restore();
       return;
     }
     const p=PLANTS.find(x=>x.id===item.pid); if(!p) return;
@@ -817,6 +834,11 @@ canvas.addEventListener('mousemove',e=>{
     if(g.shape==='rect'){g.shape='poly';g.polygon=vertsFt;}
     renderCanvas();return;
   }
+  if(isRotatingSpacер&&rotatingSpacerIdx!==null){
+    const delta=x-rotateStartX;
+    garden().placed[rotatingSpacerIdx].rotation=Math.round(rotateStartAngle+delta*0.5);
+    renderCanvas();return;
+  }
   if(isDraggingPlaced&&draggingPlacedIdx!==null){
     const c=cell();
     garden().placed[draggingPlacedIdx].x=(x-dragOffset.x)/c;
@@ -833,9 +855,20 @@ canvas.addEventListener('mousemove',e=>{
     const item=garden().placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
     // Hit test for spacers
     if(item.type==='spacer'){
+      const rot=(item.rotation||0)*Math.PI/180;
+      const cx2=px(item.x), cy2=px(item.y);
       const sw=px(item.w||4)/2, sh=px(item.h||4)/2;
-      const cx=px(item.x), cy=px(item.y);
-      if(Math.abs(x-cx)<=sw+4&&Math.abs(y-cy)<=sh+4){
+      // Check rotation handle (circle above spacer)
+      const handleX=cx2+Math.sin(-rot+Math.PI)*(sh+20)*Math.cos(Math.PI);
+      // Simpler: handle is at top of unrotated box transformed
+      const hx=cx2+(-sh-20)*Math.sin(rot), hy=cy2+(-sh-20)*Math.cos(rot);
+      if(Math.hypot(x-hx,y-hy)<=8&&!item.locked){
+        isRotatingSpacер=true; rotatingSpacerIdx=i; selectedIdx=i;
+        rotateStartX=x; rotateStartAngle=item.rotation||0;
+        canvas.style.cursor='grab'; renderCanvas(); return;
+      }
+      // Check body hit
+      if(Math.abs(x-cx2)<=sw+4&&Math.abs(y-cy2)<=sh+4){
         const c2=cell(); selectedIdx=i;
         if(!item.locked){isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c2,y:y-item.y*c2};}
         renderCanvas();updatePlacedList();return;
@@ -890,9 +923,20 @@ canvas.addEventListener('mousedown',e=>{
     const item=placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
     // Hit test for spacers
     if(item.type==='spacer'){
+      const rot=(item.rotation||0)*Math.PI/180;
+      const cx2=px(item.x), cy2=px(item.y);
       const sw=px(item.w||4)/2, sh=px(item.h||4)/2;
-      const cx=px(item.x), cy=px(item.y);
-      if(Math.abs(x-cx)<=sw+4&&Math.abs(y-cy)<=sh+4){
+      // Check rotation handle (circle above spacer)
+      const handleX=cx2+Math.sin(-rot+Math.PI)*(sh+20)*Math.cos(Math.PI);
+      // Simpler: handle is at top of unrotated box transformed
+      const hx=cx2+(-sh-20)*Math.sin(rot), hy=cy2+(-sh-20)*Math.cos(rot);
+      if(Math.hypot(x-hx,y-hy)<=8&&!item.locked){
+        isRotatingSpacер=true; rotatingSpacerIdx=i; selectedIdx=i;
+        rotateStartX=x; rotateStartAngle=item.rotation||0;
+        canvas.style.cursor='grab'; renderCanvas(); return;
+      }
+      // Check body hit
+      if(Math.abs(x-cx2)<=sw+4&&Math.abs(y-cy2)<=sh+4){
         const c2=cell(); selectedIdx=i;
         if(!item.locked){isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c2,y:y-item.y*c2};}
         renderCanvas();updatePlacedList();return;
@@ -904,14 +948,16 @@ canvas.addEventListener('mousedown',e=>{
       showPlantInfo(item.pid);renderCanvas();return;
     }
   }
-  selectedIdx=null;isDraggingPlaced=false;draggingPlacedIdx=null;renderCanvas();
+  selectedIdx=null;isDraggingPlaced=false;draggingPlacedIdx=null;
+  if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}renderCanvas();
 });
 
 canvas.addEventListener('mouseup',e=>{
   if(!appReady) return;
   const{x,y}=coords(e);
   if(isDraggingVertex){isDraggingVertex=false;editingVertexIdx=null;canvas.style.cursor='default';scheduleSave();return;}
-  if(isDraggingPlaced){isDraggingPlaced=false;draggingPlacedIdx=null;scheduleSave();return;}
+  if(isDraggingPlaced){isDraggingPlaced=false;draggingPlacedIdx=null;
+  if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}scheduleSave();return;}
   if(activeTool==='rect'&&isDrawingRect&&rectStart){
     isDrawingRect=false;
     const rw=Math.abs(x-rectStart.x),rh=Math.abs(y-rectStart.y);
@@ -955,7 +1001,8 @@ canvas.addEventListener('drop',e=>{
   showPlantInfo(dragPlantId);renderCanvas();updatePlacedList();scheduleSave();
 });
 
-canvas.addEventListener('mouseleave',()=>{isDraggingPlaced=false;draggingPlacedIdx=null;document.getElementById('tooltip').style.display='none';});
+canvas.addEventListener('mouseleave',()=>{isDraggingPlaced=false;draggingPlacedIdx=null;
+  if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}document.getElementById('tooltip').style.display='none';});
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){polyPoints=[];isDrawingPoly=false;isDrawingRect=false;rectStart=null;renderCanvas();return;}
@@ -1065,33 +1112,50 @@ function addSpacer(){
         <span style="display:inline-block;width:14px;height:14px;background:${t.color};border-radius:3px;vertical-align:middle;margin-right:5px;"></span>${t.label}
       </button>`).join('')}
     </div>
-    <div style="font-size:11px;color:#888;margin-bottom:10px;">Or type a custom name:</div>
-    <div style="display:flex;gap:6px;">
+    <div style="font-size:11px;color:#888;margin-bottom:8px;">Or type a custom name:</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input id="spacer-custom" placeholder="e.g. Compost bin" style="flex:1;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
-      <button onclick="placeCustomSpacer()" style="height:32px;padding:0 10px;background:#2d5a1b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Add</button>
     </div>
-    <button onclick="document.getElementById('spacer-picker').remove()" style="margin-top:12px;width:100%;height:30px;border:1px solid #d0cfc8;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:#888;">Cancel</button>`;
+    <div style="font-size:11px;color:#888;margin-bottom:6px;">Size (feet):</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <label style="font-size:12px;">W</label>
+      <input id="spacer-w" type="number" value="8" min="1" max="100" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
+      <label style="font-size:12px;">H</label>
+      <input id="spacer-h" type="number" value="8" min="1" max="100" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
+      <label style="font-size:12px;">Rotate°</label>
+      <input id="spacer-r" type="number" value="0" min="-180" max="180" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button onclick="placeCustomSpacer()" style="flex:1;height:32px;background:#2d5a1b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Add Custom</button>
+    </div>
+    <button onclick="document.getElementById('spacer-picker').remove()" style="margin-top:10px;width:100%;height:30px;border:1px solid #d0cfc8;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:#888;">Cancel</button>`;
   document.body.appendChild(picker);
 }
 
 function placeSpacer(typeIdx){
   const t = SPACER_TYPES[typeIdx];
-  _doPlaceSpacer(t.label, t.color, t.w, t.h);
+  const w = parseFloat(document.getElementById('spacer-w')?.value)||t.w;
+  const h = parseFloat(document.getElementById('spacer-h')?.value)||t.h;
+  const r = parseFloat(document.getElementById('spacer-r')?.value)||0;
+  _doPlaceSpacer(t.label, t.color, w, h, r);
 }
 
 function placeCustomSpacer(){
   const label = document.getElementById('spacer-custom').value.trim() || 'Object';
-  _doPlaceSpacer(label, '#999', 4, 4);
+  const w = parseFloat(document.getElementById('spacer-w')?.value)||4;
+  const h = parseFloat(document.getElementById('spacer-h')?.value)||4;
+  const r = parseFloat(document.getElementById('spacer-r')?.value)||0;
+  _doPlaceSpacer(label, '#999', w, h, r);
 }
 
-function _doPlaceSpacer(label, color, w, h){
+function _doPlaceSpacer(label, color, w, h, rotation=0){
   const picker = document.getElementById('spacer-picker');
   if(picker) picker.remove();
   const g = garden(); if(!g) return;
   if(!g.placed) g.placed = [];
   // Place in center of garden
   const cx = g.w/2, cy = g.d/2;
-  g.placed.push({type:'spacer', label, color, w, h, x:cx, y:cy, locked:false});
+  g.placed.push({type:'spacer', label, color, w, h, x:cx, y:cy, rotation:rotation||0, locked:false});
   selectedIdx = g.placed.length - 1;
   updatePlacedList(); renderCanvas(); scheduleSave();
 }
@@ -1112,6 +1176,25 @@ function showPlantInfo(pid){
     <div class="pd-row"><span class="pd-label">Roots</span><span class="pd-val">${p.root}</span></div>
     <div class="pd-row"><span class="pd-label">Propagation</span><span class="pd-val">${p.propagation||'—'}</span></div>
     <div class="pd-desc">${p.desc}</div>`;
+}
+
+function cleanupStacked(){
+  if(!appReady||!garden()) return;
+  const g=garden();
+  const before=g.placed.length;
+  // Remove plants at exactly x=0,y=0 or within 0.5ft of origin (stacked/unplaced)
+  g.placed=g.placed.filter(item=>{
+    if(item.type==='spacer') return true;
+    return !(item.x<0.5 && item.y<0.5);
+  });
+  const removed=before-g.placed.length;
+  if(removed>0){
+    selectedIdx=null;
+    renderCanvas(); updatePlacedList(); scheduleSave();
+    alert('Removed '+removed+' stacked plant'+(removed>1?'s':'')+' from the top-left corner.');
+  } else {
+    alert('No stacked plants found.');
+  }
 }
 
 function clearGarden(){
@@ -1148,6 +1231,7 @@ window.loadPlants = loadPlants;
 window.setFilter = setFilter;
 window.setTool = setTool;
 window.addSpacer = addSpacer;
+window.cleanupStacked = cleanupStacked;
 window.placeSpacer = placeSpacer;
 window.placeCustomSpacer = placeCustomSpacer;
 window.toggleLock = toggleLock;
