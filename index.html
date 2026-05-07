@@ -894,6 +894,7 @@ function renderPlantList(){
   list.innerHTML='';
   if(!filtered.length){list.innerHTML='<div style="padding:12px;font-size:12px;color:#aaa;">No plants match.</div>';return;}
   const fmt=i=>i>=12?(i/12).toFixed(1).replace('.0','')+"'":i+'"';
+  filtered.sort((a,b)=>a.name.localeCompare(b.name));
   filtered.forEach(p=>{
     const d=document.createElement('div');d.className='plant-card';d.draggable=true;
     d.innerHTML=`${p.img?`<img class="pc-img" src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:'' }
