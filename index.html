@@ -240,6 +240,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
       <button class="tool-btn" id="tool-rect"  onclick="setTool('rect')">⬜ Rectangle bed</button>
       <button class="tool-btn" id="tool-poly"  onclick="setTool('poly')">⬡ Freeform bed</button>
       <button class="tool-btn" id="tool-edit"  onclick="setTool('edit')">✥ Edit shape</button>
+      <button class="spacer-btn" onclick="addSpacer()" title="Add a non-plant object (septic, shed, etc)">+ Spacer</button>
       <div class="tb-sep"></div>
       <span class="tg-label">Canvas (ft):</span>
       <span class="tg-label">W</span>
@@ -589,6 +590,7 @@ async function loadPlants(){
     PLANTS = data.map(norm).filter(p=>p.id&&p.name);
     setDS('ok','✓ '+PLANTS.length+' plants');
     renderPlantList();
+    updatePlacedList();
   } catch(e){
     setDS('err','⚠ Error');
     showErr('<strong>Plant load failed.</strong><br><code>'+e.message+'</code>');
@@ -787,6 +789,23 @@ function renderCanvas(){
 }
 
 function coords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(canvas.width/PR/r.width),y:(e.clientY-r.top)*(canvas.height/PR/r.height)};}
+
+canvas.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  if(activeTool!=='edit') return;
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const g=garden();
+  if(!g||g.shape!=='poly'||!g.polygon||g.polygon.length<=3) return;
+  // Find vertex within click range
+  const hit=g.polygon.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=10);
+  if(hit>=0){
+    g.polygon.splice(hit,1);
+    editingVertexIdx=null;
+    renderCanvas();
+    scheduleSave();
+  }
+});
 
 canvas.addEventListener('mousemove',e=>{
   if(!appReady) return;
