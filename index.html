@@ -102,6 +102,8 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 #placed-list{margin-top:14px;}
 #placed-list h3{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
 .placed-item{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;border-bottom:1px solid #f0efe8;}
+.placed-lock{background:none;border:none;cursor:pointer;font-size:12px;padding:0 3px;opacity:0.4;flex-shrink:0;}
+.placed-lock.locked{opacity:1;}
 .placed-item span{color:#444;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .placed-count{background:#2d5a1b;color:#fff;border-radius:8px;padding:1px 6px;font-size:11px;font-weight:600;margin-left:4px;}
 #error-banner{display:none;background:#fcebeb;border:1px solid #f09595;border-radius:8px;padding:10px 14px;margin:8px;font-size:12px;color:#501313;line-height:1.6;}
@@ -111,6 +113,11 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 #loading-screen{position:fixed;inset:0;background:#f5f4f0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:12px;}
 #loading-screen .ls-title{font-size:15px;color:#2d5a1b;font-weight:600;}
 #ls-status{font-size:12px;color:#888;min-height:18px;}
+
+.spacer-btn{height:28px;padding:0 10px;border:1px solid #d0cfc8;border-radius:6px;font-size:11px;background:#fff8ee;cursor:pointer;white-space:nowrap;}
+.spacer-btn:hover{background:#ffe8c0;border-color:#cc9900;}
+.spacer-item{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;font-weight:600;color:#fff;text-align:center;}
+
 </style>
 </head>
 <body>
@@ -725,8 +732,39 @@ function renderCanvas(){
       ctx.fillStyle=i===editingVertexIdx?'#cc9900':'#fff';ctx.fill();
       ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.stroke();
     });
+    // Draw midpoint hints on edges (click to add point)
+    if(g.shape==='poly'&&g.polygon){
+      verts.forEach((p,i)=>{
+        const b=verts[(i+1)%verts.length];
+        const mx=(p.x+b.x)/2, my=(p.y+b.y)/2;
+        ctx.beginPath();ctx.arc(mx,my,4,0,Math.PI*2);
+        ctx.fillStyle='rgba(45,90,27,0.3)';ctx.fill();
+        ctx.strokeStyle='#2d5a1b';ctx.lineWidth=1;ctx.stroke();
+      });
+    }
   }
   (g.placed||[]).forEach((item,idx)=>{
+    // Draw spacers
+    if(item.type==='spacer'){
+      const cx=px(item.x), cy=px(item.y);
+      const sw=px(item.w||4), sh=px(item.h||4);
+      const sel=idx===selectedIdx;
+      ctx.fillStyle=item.color||'#999';
+      ctx.globalAlpha=0.35;
+      ctx.fillRect(cx-sw/2,cy-sh/2,sw,sh);
+      ctx.globalAlpha=1;
+      ctx.strokeStyle=sel?'#cc9900':(item.color||'#999');
+      ctx.lineWidth=sel?2.5:1.5;
+      if(sel) ctx.setLineDash([4,3]);
+      ctx.strokeRect(cx-sw/2,cy-sh/2,sw,sh);
+      ctx.setLineDash([]);
+      const lfs=Math.max(8,Math.min(12,sw*0.25));
+      ctx.fillStyle='#333';ctx.font=`600 ${lfs}px sans-serif`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(item.label||'',cx,cy);
+      if(item.locked){ctx.font=`${lfs}px sans-serif`;ctx.fillText('🔒',cx,cy-sh/2-8);}
+      return;
+    }
     const p=PLANTS.find(x=>x.id===item.pid); if(!p) return;
     const cx=px(item.x),cy=px(item.y),r=Math.max(6,inToPx(p.wide/2)),sr=r*1.35,sel=idx===selectedIdx;
     ctx.beginPath();ctx.arc(cx,cy,sr,0,Math.PI*2);ctx.fillStyle='rgba(45,90,27,0.07)';ctx.fill();
@@ -735,6 +773,7 @@ function renderCanvas(){
     ctx.fillStyle=sel?'#fff8c0':'#c8e6b0';ctx.fill();
     ctx.strokeStyle=sel?'#cc9900':'#2d5a1b';ctx.lineWidth=sel?2.5:1.5;ctx.stroke();
     if(sel){ctx.beginPath();ctx.arc(cx,cy,r+5,0,Math.PI*2);ctx.strokeStyle='rgba(204,153,0,0.3)';ctx.lineWidth=2;ctx.stroke();}
+    if(item.locked){const lsz=Math.max(9,r*0.55);ctx.font=`${lsz}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('🔒',cx-lsz/2,cy-r-2);}
     const lfs=Math.max(8,Math.min(11,r*0.55));
     ctx.fillStyle='#1a4a0a';ctx.font=`500 ${lfs}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     const words=p.name.split(' ');
@@ -773,6 +812,17 @@ canvas.addEventListener('mousemove',e=>{
   const tip=document.getElementById('tooltip');
   for(let i=(garden().placed||[]).length-1;i>=0;i--){
     const item=garden().placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
+    // Hit test for spacers
+    if(item.type==='spacer'){
+      const sw=px(item.w||4)/2, sh=px(item.h||4)/2;
+      const cx=px(item.x), cy=px(item.y);
+      if(Math.abs(x-cx)<=sw+4&&Math.abs(y-cy)<=sh+4){
+        const c2=cell(); selectedIdx=i;
+        if(!item.locked){isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c2,y:y-item.y*c2};}
+        renderCanvas();updatePlacedList();return;
+      }
+      continue;
+    }
     if(Math.hypot(x-px(item.x),y-px(item.y))<=Math.max(6,inToPx(p.wide/2))+6){
       tip.style.display='block';tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-10)+'px';
       tip.textContent=p.name+(p.bloom?' · '+p.bloom:'')+(p.sun?' · '+p.sun:'');return;
@@ -786,16 +836,52 @@ canvas.addEventListener('mousedown',e=>{
   const{x,y}=coords(e);
   if(activeTool==='edit'){
     const vertsHit=activePoly();
+    // Check if clicking an existing vertex
     const hit=vertsHit.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8);
     if(hit>=0){editingVertexIdx=hit;isDraggingVertex=true;canvas.style.cursor='grabbing';return;}
+    // Check if clicking on an edge — insert new point
+    const g=garden();
+    if(g.shape==='poly'&&g.polygon){
+      const verts=g.polygon;
+      for(let i=0;i<verts.length;i++){
+        const a=verts[i], b=verts[(i+1)%verts.length];
+        // Distance from point to line segment
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const len2=dx*dx+dy*dy;
+        if(len2===0) continue;
+        const t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/len2));
+        const nx=a.x+t*dx, ny=a.y+t*dy;
+        if(Math.hypot(x-nx,y-ny)<=8){
+          // Insert new vertex after index i
+          const newPt={x:nx/cell(),y:ny/cell()};
+          verts.splice(i+1,0,{x:nx,y:ny});
+          editingVertexIdx=i+1;
+          isDraggingVertex=true;
+          canvas.style.cursor='grabbing';
+          renderCanvas();
+          return;
+        }
+      }
+    }
   }
   if(activeTool==='rect'){isDrawingRect=true;rectStart={x,y};return;}
   if(activeTool==='poly') return;
   const placed=garden().placed||[];
   for(let i=placed.length-1;i>=0;i--){
     const item=placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
+    // Hit test for spacers
+    if(item.type==='spacer'){
+      const sw=px(item.w||4)/2, sh=px(item.h||4)/2;
+      const cx=px(item.x), cy=px(item.y);
+      if(Math.abs(x-cx)<=sw+4&&Math.abs(y-cy)<=sh+4){
+        const c2=cell(); selectedIdx=i;
+        if(!item.locked){isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c2,y:y-item.y*c2};}
+        renderCanvas();updatePlacedList();return;
+      }
+      continue;
+    }
     if(Math.hypot(x-px(item.x),y-px(item.y))<=Math.max(6,inToPx(p.wide/2))+6){
-      const c=cell(); selectedIdx=i;isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c,y:y-item.y*c};
+      const c=cell(); selectedIdx=i; if(item.locked){showPlantInfo(item.pid);renderCanvas();return;} isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c,y:y-item.y*c};
       showPlantInfo(item.pid);renderCanvas();return;
     }
   }
@@ -857,6 +943,8 @@ document.addEventListener('keydown',e=>{
   if((e.key==='Delete'||e.key==='Backspace')&&selectedIdx!==null&&appReady){
     const a=document.activeElement;
     if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')) return;
+    const selItem=garden().placed[selectedIdx];
+    if(selItem&&selItem.locked) return;
     garden().placed.splice(selectedIdx,1);selectedIdx=null;renderCanvas();updatePlacedList();scheduleSave();
   }
 });
@@ -914,14 +1002,79 @@ function setFilter(f,btn){
 }
 
 function updatePlacedList(){
-  const g=garden(); const counts={};
-  (g&&g.placed||[]).forEach(item=>{counts[item.pid]=(counts[item.pid]||0)+1;});
+  const g=garden();
   const el=document.getElementById('placed-summary');
-  if(!Object.keys(counts).length){el.innerHTML='<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>';return;}
-  el.innerHTML=Object.entries(counts).map(([pid,cnt])=>{
-    const p=PLANTS.find(x=>x.id===pid);
-    return`<div class="placed-item"><span>${p?p.name:pid}</span><span class="placed-count">${cnt}</span></div>`;
+  const items=(g&&g.placed)||[];
+  if(!items.length){el.innerHTML='<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>';return;}
+  el.innerHTML=items.map((item,i)=>{
+    const p=PLANTS.find(x=>x.id===item.pid);
+    const isLocked=!!item.locked;
+    return`<div class="placed-item">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isLocked?'#2d5a1b':'#444'}">${p?p.name:(item.type==='spacer'?item.label||'Spacer':item.pid)}</span>
+      <button class="placed-lock${isLocked?' locked':''}" onclick="toggleLock(${i})" title="${isLocked?'Unlock':'Lock'}">${isLocked?'🔒':'🔓'}</button>
+    </div>`;
   }).join('');
+}
+
+function toggleLock(i){
+  const g=garden(); if(!g||!g.placed[i]) return;
+  g.placed[i].locked=!g.placed[i].locked;
+  updatePlacedList(); renderCanvas(); scheduleSave();
+}
+
+// ── SPACERS ──
+const SPACER_TYPES = [
+  {label:'Septic',   color:'#8B4513', w:10, h:10},
+  {label:'Woodpile', color:'#8B6914', w:4,  h:4},
+  {label:'Shed',     color:'#666',    w:8,  h:8},
+  {label:'Path',     color:'#b8a88a', w:3,  h:10},
+  {label:'Rock',     color:'#888',    w:3,  h:3},
+  {label:'Other',    color:'#aaa',    w:4,  h:4},
+];
+
+function addSpacer(){
+  if(!appReady||!garden()) return;
+  // Build a simple picker dialog
+  const existing = document.getElementById('spacer-picker');
+  if(existing){ existing.remove(); return; }
+  const picker = document.createElement('div');
+  picker.id = 'spacer-picker';
+  picker.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #d0cfc8;border-radius:12px;padding:20px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,0.15);min-width:260px;';
+  picker.innerHTML = `<div style="font-weight:600;margin-bottom:12px;color:#2d5a1b;">Add Spacer Object</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      ${SPACER_TYPES.map((t,i)=>`<button onclick="placeSpacer(${i})" style="padding:8px;border:1px solid #d0cfc8;border-radius:8px;cursor:pointer;background:#fafaf8;font-size:12px;">
+        <span style="display:inline-block;width:14px;height:14px;background:${t.color};border-radius:3px;vertical-align:middle;margin-right:5px;"></span>${t.label}
+      </button>`).join('')}
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">Or type a custom name:</div>
+    <div style="display:flex;gap:6px;">
+      <input id="spacer-custom" placeholder="e.g. Compost bin" style="flex:1;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
+      <button onclick="placeCustomSpacer()" style="height:32px;padding:0 10px;background:#2d5a1b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Add</button>
+    </div>
+    <button onclick="document.getElementById('spacer-picker').remove()" style="margin-top:12px;width:100%;height:30px;border:1px solid #d0cfc8;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:#888;">Cancel</button>`;
+  document.body.appendChild(picker);
+}
+
+function placeSpacer(typeIdx){
+  const t = SPACER_TYPES[typeIdx];
+  _doPlaceSpacer(t.label, t.color, t.w, t.h);
+}
+
+function placeCustomSpacer(){
+  const label = document.getElementById('spacer-custom').value.trim() || 'Object';
+  _doPlaceSpacer(label, '#999', 4, 4);
+}
+
+function _doPlaceSpacer(label, color, w, h){
+  const picker = document.getElementById('spacer-picker');
+  if(picker) picker.remove();
+  const g = garden(); if(!g) return;
+  if(!g.placed) g.placed = [];
+  // Place in center of garden
+  const cx = g.w/2, cy = g.d/2;
+  g.placed.push({type:'spacer', label, color, w, h, x:cx, y:cy, locked:false});
+  selectedIdx = g.placed.length - 1;
+  updatePlacedList(); renderCanvas(); scheduleSave();
 }
 
 function showPlantInfo(pid){
@@ -975,6 +1128,10 @@ window.exportPNG = exportPNG;
 window.loadPlants = loadPlants;
 window.setFilter = setFilter;
 window.setTool = setTool;
+window.addSpacer = addSpacer;
+window.placeSpacer = placeSpacer;
+window.placeCustomSpacer = placeCustomSpacer;
+window.toggleLock = toggleLock;
 
 </script>
 </body>
