@@ -257,7 +257,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
       <input type="number" id="bed-d" value="12" min="2" max="300" style="width:52px;height:26px;" />
       <button class="tb-btn" onclick="applyBedSettings()" style="height:26px;">Apply</button>
       <div class="tb-sep"></div>
-      <span id="tool-hint" style="font-size:11px;color:#aaa;">Drag a plant from the palette onto the bed</span>
+      <span id="tool-hint" style="font-size:12px;color:#666;font-weight:500;">Drag a plant from the palette onto the bed</span>
     </div>
     <div id="canvas-area">
       <div id="legend">
@@ -611,15 +611,24 @@ async function loadPlants(){
 const hints={
   place:'Drag a plant onto the bed · Click to select · Delete key to remove · Use tools above to change bed shape',
   rect:'Click and drag to draw a rectangle bed · Shape locks automatically when done',
-  poly:'Click canvas to place corner points · Click first point or double-click to FINISH and lock shape · Esc to cancel',
+  poly:'👆 Click canvas to place corner points · Click FIRST point or double-click to FINISH · Esc to cancel',
   edit:'Drag a corner handle to reshape · Double-click an edge to add a corner · Right-click a corner to remove it to remove it'
 };
 function setTool(t){
   activeTool=t; polyPoints=[]; isDrawingPoly=false; isDrawingRect=false; rectStart=null;
   document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tool-'+t).classList.add('active');
-  document.getElementById('tool-hint').textContent=hints[t];
-  canvas.style.cursor=t==='edit'?'default':'crosshair';
+  const btn=document.getElementById('tool-'+t);
+  if(btn) btn.classList.add('active');
+  const hintEl=document.getElementById('tool-hint');
+  hintEl.textContent=hints[t];
+  // Highlight hint bar when drawing tools active
+  const isDrawing=(t==='poly'||t==='rect');
+  hintEl.style.color=isDrawing?'#2d5a1b':'#666';
+  hintEl.style.fontWeight=isDrawing?'700':'500';
+  hintEl.style.background=isDrawing?'#eaf3de':'transparent';
+  hintEl.style.padding=isDrawing?'4px 10px':'0';
+  hintEl.style.borderRadius=isDrawing?'6px':'0';
+  canvas.style.cursor=(t==='edit'||t==='place')?'default':'crosshair';
   renderCanvas();
 }
 
@@ -725,12 +734,13 @@ function renderCanvas(){
     ctx.strokeRect(Math.min(rectStart.x,mx),Math.min(rectStart.y,my),Math.abs(mx-rectStart.x),Math.abs(my-rectStart.y));
     ctx.setLineDash([]);
   }
-  if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length){
+  if(activeTool==='poly'){
     // Show prominent banner at BOTTOM so ruler stays visible
     ctx.fillStyle='rgba(45,90,27,0.88)';
     ctx.fillRect(0,canvas.height-28,canvas.width,28);
     ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
     ctx.fillText('DRAWING SHAPE — Click to add corners · Click first point or double-click to FINISH · Esc to cancel',canvas.width/2,canvas.height-10);
+    if(!isDrawingPoly||!polyPoints.length){return;}
     ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
     ctx.beginPath(); polyPoints.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
     ctx.lineTo(mousePos.x,mousePos.y); ctx.stroke(); ctx.setLineDash([]);
@@ -906,7 +916,9 @@ canvas.addEventListener('mousedown',e=>{
   if(activeTool==='poly') return;
   const placed=garden().placed||[];
   for(let i=placed.length-1;i>=0;i--){
-    const item=placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
+    const item=placed[i];
+    const p=item.type==='spacer'?null:PLANTS.find(x=>x.id===item.pid);
+    if(!p&&item.type!=='spacer') continue;
     // Hit test for spacers
     if(item.type==='spacer'){
       const rot=(item.rotation||0)*Math.PI/180;
