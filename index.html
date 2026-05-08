@@ -607,7 +607,7 @@ const hints={
   place:'Drag a plant from the palette onto the bed · Click placed plant to select · Delete to remove',
   rect:'Click and drag on the canvas to draw a rectangular bed boundary',
   poly:'Click to add corner points · Double-click or click first point to close · Esc to cancel',
-  edit:'Drag white handles to reshape · Double-click edge to add point · Right-click point to remove'
+  edit:'Drag a corner handle to reshape · Double-click on an edge to add a corner · Right-click a corner point to remove it'
 };
 function setTool(t){
   activeTool=t; polyPoints=[]; isDrawingPoly=false; isDrawingRect=false; rectStart=null;
@@ -813,7 +813,9 @@ canvas.addEventListener('contextmenu', e=>{
   const g=garden();
   if(!g||g.shape!=='poly'||!g.polygon||g.polygon.length<=3) return;
   // Find vertex within click range
-  const hit=g.polygon.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=10);
+  // Hit test in px coords, remove from ft array
+  const polyPx=polyToPx(g.polygon);
+  const hit=polyPx.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=10);
   if(hit>=0){
     g.polygon.splice(hit,1);
     editingVertexIdx=null;
@@ -955,22 +957,24 @@ canvas.addEventListener('click',e=>{
 
 canvas.addEventListener('dblclick',e=>{
   if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length>=3){finishPoly();return;}
-  // Double-click on edge in edit mode = add new point
+  // Double-click on edge in edit mode = add new point (coords in FEET)
   if(activeTool==='edit'){
     const rect=canvas.getBoundingClientRect();
-    const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
     const g=garden();
     if(!g||g.shape!=='poly'||!g.polygon) return;
-    const verts=g.polygon;
-    for(let i=0;i<verts.length;i++){
-      const a=verts[i], b=verts[(i+1)%verts.length];
+    const vertsFt=g.polygon; // stored in feet
+    const vertsPx=polyToPx(vertsFt); // px for hit testing
+    for(let i=0;i<vertsPx.length;i++){
+      const a=vertsPx[i], b=vertsPx[(i+1)%vertsPx.length];
       const dx=b.x-a.x, dy=b.y-a.y;
       const len2=dx*dx+dy*dy;
       if(len2===0) continue;
-      const t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/len2));
+      const t=Math.max(0,Math.min(1,((mx-a.x)*dx+(my-a.y)*dy)/len2));
       const nx=a.x+t*dx, ny=a.y+t*dy;
-      if(Math.hypot(x-nx,y-ny)<=10){
-        verts.splice(i+1,0,{x:nx,y:ny});
+      if(Math.hypot(mx-nx,my-ny)<=10){
+        // Insert in FEET coords
+        vertsFt.splice(i+1,0,{x:nx/cell(),y:ny/cell()});
         editingVertexIdx=i+1;
         renderCanvas();
         return;
@@ -1198,21 +1202,10 @@ function cleanupStacked(){
 function resetPoints(){
   if(!appReady||!garden()) return;
   const g=garden();
-  if(g.shape!=='poly'||!g.polygon){
-    alert('This bed is already a rectangle with no extra points.');
-    return;
-  }
-  if(!confirm('Remove all extra polygon points and reset to 4 corners? Plants stay.')) return;
-  // Build a bounding-box rectangle from current polygon points
-  const xs=g.polygon.map(p=>p.x), ys=g.polygon.map(p=>p.y);
-  const minX=Math.min(...xs), maxX=Math.max(...xs);
-  const minY=Math.min(...ys), maxY=Math.max(...ys);
-  g.polygon=[
-    {x:minX, y:minY},
-    {x:maxX, y:minY},
-    {x:maxX, y:maxY},
-    {x:minX, y:maxY}
-  ];
+  if(!confirm('Reset to a clean 4-corner rectangle? Your plants stay, only the shape outline is reset.')) return;
+  // Always use garden W and D for a clean rectangle in feet
+  g.shape='rect';
+  g.polygon=null;
   renderCanvas();
   scheduleSave();
 }
