@@ -200,6 +200,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
   <button class="tb-btn" onclick="loadPlants()">↺ Reload plants</button>
   <button class="tb-btn" onclick="exportPNG()">Export PNG</button>
   <button class="tb-btn" onclick="cleanupStacked()" title="Remove plants piled at position 0,0">Clean up</button>
+  <button class="tb-btn" onclick="resetShape()" title="Reset garden outline back to a rectangle (keeps plants)">Reset shape</button>
   <button class="tb-btn danger" onclick="clearGarden()">Clear bed</button>
   <div id="spacer"></div>
   <span id="save-status" class="ss-idle">Ready</span>
@@ -1193,6 +1194,16 @@ function cleanupStacked(){
   }
 }
 
+function resetShape(){
+  if(!appReady||!garden()) return;
+  const g=garden();
+  if(!confirm('Reset "'+g.name+'" back to a rectangle? Plants will stay, only the shape resets.')) return;
+  g.shape='rect';
+  g.polygon=null;
+  renderCanvas();
+  scheduleSave();
+}
+
 function clearGarden(){
   if(!appReady) return;
   if(!confirm('Remove all plants from "'+garden().name+'"?')) return;
@@ -1228,6 +1239,7 @@ window.setFilter = setFilter;
 window.setTool = setTool;
 window.addSpacer = addSpacer;
 window.cleanupStacked = cleanupStacked;
+window.resetShape = resetShape;
 window.placeSpacer = placeSpacer;
 window.placeCustomSpacer = placeCustomSpacer;
 window.toggleLock = toggleLock;
