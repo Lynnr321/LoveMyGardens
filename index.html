@@ -199,8 +199,9 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
   <div class="tb-sep"></div>
   <button class="tb-btn" onclick="loadPlants()">↺ Reload plants</button>
   <button class="tb-btn" onclick="exportPNG()">Export PNG</button>
-  <button class="tb-btn" onclick="cleanupStacked()" title="Remove plants piled at position 0,0">Clean up</button>
-  <button class="tb-btn" onclick="resetShape()" title="Reset garden outline back to a rectangle (keeps plants)">Reset shape</button>
+  <button class="tb-btn" onclick="cleanupStacked()" title="Remove stacked plants from top-left corner">Reset plants</button>
+  <button class="tb-btn" onclick="resetShape()" title="Reset bed outline back to a rectangle (keeps plants)">Reset bed</button>
+  <button class="tb-btn" onclick="resetPoints()" title="Reduce polygon to 4 corner points (keeps plants and bed shape)">Reset points</button>
   <button class="tb-btn danger" onclick="clearGarden()">Clear bed</button>
   <div id="spacer"></div>
   <span id="save-status" class="ss-idle">Ready</span>
@@ -1194,10 +1195,32 @@ function cleanupStacked(){
   }
 }
 
+function resetPoints(){
+  if(!appReady||!garden()) return;
+  const g=garden();
+  if(g.shape!=='poly'||!g.polygon){
+    alert('This bed is already a rectangle with no extra points.');
+    return;
+  }
+  if(!confirm('Remove all extra polygon points and reset to 4 corners? Plants stay.')) return;
+  // Build a bounding-box rectangle from current polygon points
+  const xs=g.polygon.map(p=>p.x), ys=g.polygon.map(p=>p.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  g.polygon=[
+    {x:minX, y:minY},
+    {x:maxX, y:minY},
+    {x:maxX, y:maxY},
+    {x:minX, y:maxY}
+  ];
+  renderCanvas();
+  scheduleSave();
+}
+
 function resetShape(){
   if(!appReady||!garden()) return;
   const g=garden();
-  if(!confirm('Reset "'+g.name+'" back to a rectangle? Plants will stay, only the shape resets.')) return;
+  if(!confirm('Reset bed "'+g.name+'" back to a rectangle? Plants will stay, only the shape resets.')) return;
   g.shape='rect';
   g.polygon=null;
   renderCanvas();
@@ -1240,6 +1263,7 @@ window.setTool = setTool;
 window.addSpacer = addSpacer;
 window.cleanupStacked = cleanupStacked;
 window.resetShape = resetShape;
+window.resetPoints = resetPoints;
 window.placeSpacer = placeSpacer;
 window.placeCustomSpacer = placeCustomSpacer;
 window.toggleLock = toggleLock;
