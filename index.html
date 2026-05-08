@@ -726,11 +726,11 @@ function renderCanvas(){
     ctx.setLineDash([]);
   }
   if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length){
-    // Show prominent banner so user knows they're still drawing
-    ctx.fillStyle='rgba(45,90,27,0.85)';
-    ctx.fillRect(0,0,canvas.width,28);
+    // Show prominent banner at BOTTOM so ruler stays visible
+    ctx.fillStyle='rgba(45,90,27,0.88)';
+    ctx.fillRect(0,canvas.height-28,canvas.width,28);
     ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
-    ctx.fillText('DRAWING SHAPE — Click to add corners · Click first point or double-click to FINISH',canvas.width/2,18);
+    ctx.fillText('DRAWING SHAPE — Click to add corners · Click first point or double-click to FINISH · Esc to cancel',canvas.width/2,canvas.height-10);
     ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
     ctx.beginPath(); polyPoints.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
     ctx.lineTo(mousePos.x,mousePos.y); ctx.stroke(); ctx.setLineDash([]);
