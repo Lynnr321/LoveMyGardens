@@ -118,6 +118,10 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 .spacer-btn:hover{background:#ffe8c0;border-color:#cc9900;}
 .spacer-item{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;font-weight:600;color:#fff;text-align:center;}
 
+
+@keyframes pulse {
+  0%,100%{opacity:1;} 50%{opacity:0.7;}
+}
 </style>
 </head>
 <body>
@@ -242,6 +246,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
       <button class="tool-btn active" id="tool-place" onclick="setTool('place')">🌱 Place plants</button>
       <button class="tool-btn" id="tool-rect"  onclick="setTool('rect')">⬜ Rectangle bed</button>
       <button class="tool-btn" id="tool-poly"  onclick="setTool('poly')">⬡ Freeform bed</button>
+      <button id="finish-shape-btn" onclick="finishPoly()" style="display:none;height:32px;padding:0 14px;background:#2d5a1b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;animation:pulse 1s infinite;">✓ Finish Shape</button>
       <button class="tool-btn" id="tool-edit"  onclick="setTool('edit')">✥ Edit shape</button>
       <button class="spacer-btn" onclick="addSpacer()" title="Add a non-plant object (septic, shed, etc)">+ Spacer</button>
       <div class="tb-sep"></div>
@@ -604,10 +609,10 @@ async function loadPlants(){
 
 /* ── TOOLS ── */
 const hints={
-  place:'Drag a plant from the palette onto the bed · Click placed plant to select · Delete to remove',
-  rect:'Click and drag on the canvas to draw a rectangular bed boundary',
-  poly:'Click to add corner points · Double-click or click first point to close · Esc to cancel',
-  edit:'Drag a corner handle to reshape · Double-click on an edge to add a corner · Right-click a corner point to remove it'
+  place:'Drag a plant onto the bed · Click to select · Delete key to remove · Use tools above to change bed shape',
+  rect:'Click and drag to draw a rectangle bed · Shape locks automatically when done',
+  poly:'Click canvas to place corner points · Click first point or double-click to FINISH and lock shape · Esc to cancel',
+  edit:'Drag a corner handle to reshape · Double-click an edge to add a corner · Right-click a corner to remove it to remove it'
 };
 function setTool(t){
   activeTool=t; polyPoints=[]; isDrawingPoly=false; isDrawingRect=false; rectStart=null;
@@ -721,6 +726,11 @@ function renderCanvas(){
     ctx.setLineDash([]);
   }
   if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length){
+    // Show prominent banner so user knows they're still drawing
+    ctx.fillStyle='rgba(45,90,27,0.85)';
+    ctx.fillRect(0,0,canvas.width,28);
+    ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+    ctx.fillText('DRAWING SHAPE — Click to add corners · Click first point or double-click to FINISH',canvas.width/2,18);
     ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
     ctx.beginPath(); polyPoints.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
     ctx.lineTo(mousePos.x,mousePos.y); ctx.stroke(); ctx.setLineDash([]);
@@ -941,6 +951,7 @@ canvas.addEventListener('mouseup',e=>{
       const g=garden();g.shape='poly';
       const c=cell();
       g.polygon=[{x:Math.min(rectStart.x,x)/c,y:Math.min(rectStart.y,y)/c},{x:Math.max(rectStart.x,x)/c,y:Math.min(rectStart.y,y)/c},{x:Math.max(rectStart.x,x)/c,y:Math.max(rectStart.y,y)/c},{x:Math.min(rectStart.x,x)/c,y:Math.max(rectStart.y,y)/c}];
+      setTool('place');
       renderCanvas();scheduleSave();
     }
     rectStart=null;
@@ -950,7 +961,12 @@ canvas.addEventListener('mouseup',e=>{
 canvas.addEventListener('click',e=>{
   if(!appReady||activeTool!=='poly') return;
   const{x,y}=coords(e);
-  if(!isDrawingPoly){isDrawingPoly=true;polyPoints=[];}
+  if(!isDrawingPoly){
+    isDrawingPoly=true;polyPoints=[];
+    // Show finish button
+    const fb=document.getElementById('finish-shape-btn');
+    if(fb) fb.style.display='inline-block';
+  }
   if(polyPoints.length>=3&&Math.hypot(x-polyPoints[0].x,y-polyPoints[0].y)<12){finishPoly();return;}
   polyPoints.push({x,y});renderCanvas();
 });
@@ -988,7 +1004,12 @@ function finishPoly(){
   const g=garden();g.shape='poly';
   const c=cell();
   g.polygon=polyPoints.map(p=>({x:p.x/c,y:p.y/c}));
-  polyPoints=[];isDrawingPoly=false;renderCanvas();scheduleSave();
+  polyPoints=[];isDrawingPoly=false;
+  // Hide finish button and auto-switch to place tool
+  const fb=document.getElementById('finish-shape-btn');
+  if(fb) fb.style.display='none';
+  setTool('place');
+  renderCanvas();scheduleSave();
 }
 
 canvas.addEventListener('dragover',e=>e.preventDefault());
@@ -1007,7 +1028,7 @@ canvas.addEventListener('mouseleave',()=>{isDraggingPlaced=false;draggingPlacedI
   if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}document.getElementById('tooltip').style.display='none';});
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){polyPoints=[];isDrawingPoly=false;isDrawingRect=false;rectStart=null;renderCanvas();return;}
+  if(e.key==='Escape'){polyPoints=[];isDrawingPoly=false;isDrawingRect=false;rectStart=null;const fb=document.getElementById('finish-shape-btn');if(fb)fb.style.display='none';setTool('place');renderCanvas();return;}
   if((e.key==='Delete'||e.key==='Backspace')&&selectedIdx!==null&&appReady){
     const a=document.activeElement;
     if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')) return;
@@ -1257,6 +1278,7 @@ window.addSpacer = addSpacer;
 window.cleanupStacked = cleanupStacked;
 window.resetShape = resetShape;
 window.resetPoints = resetPoints;
+window.finishPoly = finishPoly;
 window.placeSpacer = placeSpacer;
 window.placeCustomSpacer = placeCustomSpacer;
 window.toggleLock = toggleLock;
