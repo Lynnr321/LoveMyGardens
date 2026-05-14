@@ -1108,19 +1108,49 @@ function setFilter(f,btn){
   sunFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderPlantList();
 }
 
+function getPlantCounts(g) {
+  const items = (g && g.placed) || [];
+  const counts = {};
+  const spacers = [];
+  items.forEach((item, i) => {
+    if (item.type === 'spacer') {
+      spacers.push({ label: item.label || 'Spacer', idx: i, locked: !!item.locked });
+    } else {
+      const p = PLANTS.find(x => x.id === item.pid);
+      const name = p ? p.name : item.pid;
+      if (!counts[name]) counts[name] = { name, count: 0, locked: false };
+      counts[name].count++;
+    }
+  });
+  const sorted = Object.values(counts).sort((a, b) => a.name.localeCompare(b.name));
+  return { plants: sorted, spacers };
+}
+
 function updatePlacedList(){
-  const g=garden();
-  const el=document.getElementById('placed-summary');
-  const items=(g&&g.placed)||[];
-  if(!items.length){el.innerHTML='<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>';return;}
-  el.innerHTML=items.map((item,i)=>{
-    const p=PLANTS.find(x=>x.id===item.pid);
-    const isLocked=!!item.locked;
-    return`<div class="placed-item">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isLocked?'#2d5a1b':'#444'}">${p?p.name:(item.type==='spacer'?item.label||'Spacer':item.pid)}</span>
-      <button class="placed-lock${isLocked?' locked':''}" onclick="toggleLock(${i})" title="${isLocked?'Unlock':'Lock'}">${isLocked?'🔒':'🔓'}</button>
+  const g = garden();
+  const el = document.getElementById('placed-summary');
+  const items = (g && g.placed) || [];
+  if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>'; return; }
+  const { plants, spacers } = getPlantCounts(g);
+  let html = '';
+  plants.forEach(({ name, count }) => {
+    html += `<div class="placed-item">
+      <span style="display:inline-flex;align-items:center;gap:6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <span style="background:#2d5a1b;color:#fff;border-radius:8px;padding:1px 7px;font-size:11px;font-weight:700;flex-shrink:0;">${count}</span>
+        <span style="color:#2d5a1b;font-weight:500;">${name}</span>
+      </span>
     </div>`;
-  }).join('');
+  });
+  if (spacers.length) {
+    html += `<div style="font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;margin:8px 0 4px;font-weight:600;">Spacers</div>`;
+    spacers.forEach(({ label, idx, locked }) => {
+      html += `<div class="placed-item">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#888;">${label}</span>
+        <button class="placed-lock${locked?' locked':''}" onclick="toggleLock(${idx})" title="${locked?'Unlock':'Lock'}">${locked?'🔒':'🔓'}</button>
+      </div>`;
+    });
+  }
+  el.innerHTML = html;
 }
 
 function toggleLock(i){
@@ -1266,9 +1296,182 @@ function clearGarden(){
 }
 
 function exportPNG(){
-  const link=document.createElement('a');
-  link.download=(garden()?garden().name:'garden').replace(/\s+/g,'-')+'-plan.png';
-  link.href=canvas.toDataURL('image/png');link.click();
+  const g = garden();
+  if (!g) return;
+  const { plants, spacers } = getPlantCounts(g);
+
+  // ── Page dimensions: 8.5x11 at 96dpi = 816x1056px ──
+  const PAGE_W = 816;
+  const PAGE_H = 1056;
+  const MARGIN = 36;
+  const INNER_W = PAGE_W - MARGIN * 2;
+
+  // ── Header ──
+  const HEADER_H = 52;
+
+  // ── Garden drawing: scale to fit width, max 55% of page height ──
+  const cw = canvas.width / (window.devicePixelRatio || 1);
+  const ch = canvas.height / (window.devicePixelRatio || 1);
+  const gardenScale = Math.min(INNER_W / cw, (PAGE_H * 0.55) / ch);
+  const gardenW = Math.round(cw * gardenScale);
+  const gardenH = Math.round(ch * gardenScale);
+  const gardenX = MARGIN + (INNER_W - gardenW) / 2;
+  const gardenY = MARGIN + HEADER_H + 12;
+
+  // ── Plant list: 3 columns below garden ──
+  const LIST_TOP = gardenY + gardenH + 20;
+  const COLS = 3;
+  const COL_GAP = 14;
+  const COL_W = (INNER_W - COL_GAP * (COLS - 1)) / COLS;
+  const LINE_H = 20;
+  const BADGE_W = 26;
+
+  // Build all rows: plants then spacers
+  const allRows = plants.map(({name, count}) => ({name, count, isSpacer: false}));
+  if (spacers.length) {
+    allRows.push({name: '— Spacers —', count: null, isSpacer: true, isHeader: true});
+    spacers.forEach(({label}) => allRows.push({name: label, count: null, isSpacer: true}));
+  }
+
+  // How tall is the list section?
+  const rowsPerCol = Math.ceil(allRows.length / COLS);
+  const LIST_H = rowsPerCol * LINE_H + 28; // 28 = sub-header
+
+  const totalH = Math.min(PAGE_H, LIST_TOP + LIST_H + MARGIN);
+
+  // ── Create output canvas ──
+  const out = document.createElement('canvas');
+  out.width = PAGE_W;
+  out.height = totalH;
+  const ctx = out.getContext('2d');
+
+  // Page background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, PAGE_W, totalH);
+
+  // ── Page header bar ──
+  ctx.fillStyle = '#2d5a1b';
+  ctx.fillRect(0, 0, PAGE_W, HEADER_H);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 18px Georgia, serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🌿 ' + g.name, MARGIN, HEADER_H * 0.42);
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  const totalPlants = plants.reduce((s, p) => s + p.count, 0);
+  ctx.fillText(
+    totalPlants + ' plants · ' + plants.length + ' variet' + (plants.length === 1 ? 'y' : 'ies') +
+    (spacers.length ? ' · ' + spacers.length + ' spacer' + (spacers.length !== 1 ? 's' : '') : '') +
+    '   ·   My Native Garden Planner',
+    MARGIN, HEADER_H * 0.72
+  );
+
+  // ── Garden drawing ──
+  // Subtle shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.10)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, gardenX, gardenY, gardenW, gardenH);
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Border around garden
+  ctx.strokeStyle = '#c8d8c8';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(gardenX, gardenY, gardenW, gardenH);
+
+  // ── Plant list section ──
+  // Section header
+  ctx.fillStyle = '#e8ede8';
+  ctx.fillRect(MARGIN, LIST_TOP - 2, INNER_W, 1);
+  ctx.fillStyle = '#2d5a1b';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('PLANT LIST', MARGIN, LIST_TOP + 13);
+  ctx.fillStyle = '#aaaaaa';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('sorted alphabetically by variety', MARGIN + 82, LIST_TOP + 13);
+
+  // Divider under section header
+  ctx.fillStyle = '#e8ede8';
+  ctx.fillRect(MARGIN, LIST_TOP + 18, INNER_W, 1);
+
+  // Distribute rows across columns
+  const colStart = LIST_TOP + 28;
+  allRows.forEach((row, i) => {
+    const col = Math.floor(i / rowsPerCol);
+    const rowInCol = i % rowsPerCol;
+    const x = MARGIN + col * (COL_W + COL_GAP);
+    const y = colStart + rowInCol * LINE_H;
+
+    if (col >= COLS) return; // safety
+
+    if (row.isHeader) {
+      // Spacer section label
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = '600 9px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('SPACERS', x + 4, y + 11);
+      return;
+    }
+
+    // Alternating row background
+    if (i % 2 === 0) {
+      ctx.fillStyle = '#f6fbf6';
+      ctx.fillRect(x, y, COL_W, LINE_H - 1);
+    }
+
+    if (row.count != null) {
+      // Count badge
+      ctx.fillStyle = '#2d5a1b';
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x + 3, y + 4, BADGE_W, 13, 6);
+      } else {
+        ctx.rect(x + 3, y + 4, BADGE_W, 13);
+      }
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(row.count, x + 3 + BADGE_W / 2, y + 13);
+      // Plant name
+      ctx.fillStyle = '#1a3a0a';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left';
+      let pname = row.name;
+      const maxW = COL_W - BADGE_W - 12;
+      while (ctx.measureText(pname).width > maxW && pname.length > 3) pname = pname.slice(0, -1);
+      if (pname !== row.name) pname += '…';
+      ctx.fillText(pname, x + BADGE_W + 8, y + 13);
+    } else {
+      // Spacer item
+      ctx.fillStyle = '#888888';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('• ' + row.name, x + 6, y + 13);
+    }
+  });
+
+  // ── Footer ──
+  ctx.fillStyle = '#e8ede8';
+  ctx.fillRect(0, totalH - 22, PAGE_W, 1);
+  ctx.fillStyle = '#bbbbbb';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Generated by My Native Garden Planner · mynativegardenplanner.com · ' + new Date().toLocaleDateString(), PAGE_W / 2, totalH - 11);
+
+  // ── Download ──
+  const link = document.createElement('a');
+  link.download = g.name.replace(/\s+/g, '-') + '-plan.png';
+  link.href = out.toDataURL('image/png');
+  link.click();
 }
 
 // Auth handles initGardens() and loadPlants() calls
