@@ -484,7 +484,11 @@ function sanitizeGardens(raw){
     name: g.name, w: g.w, d: g.d,
     shape: g.shape || 'rect',
     polygon: g.polygon || null,
-    placed: Array.isArray(g.placed) ? g.placed.filter(p => p && p.pid && typeof p.x === 'number') : []
+    placed: Array.isArray(g.placed) ? g.placed.filter(p => {
+      if (!p || typeof p.x !== 'number') return false;
+      if (p.type === 'spacer') return typeof p.w === 'number' && typeof p.h === 'number';
+      return !!p.pid;
+    }) : []
   }));
   return valid.length > 0 ? valid : null;
 }
@@ -818,8 +822,10 @@ function renderCanvas(){
     else ctx.fillText(words[0],cx,cy);
   });
   ctx.textAlign='left';ctx.textBaseline='alphabetic';
-  const cnt=(g.placed||[]).length;
-  document.getElementById('plant-count').textContent=cnt+' plant'+(cnt!==1?'s':'')+' placed';
+  const placed=(g.placed||[]);
+  const cnt=placed.filter(p=>p.type!=='spacer').length;
+  const spacerCnt=placed.filter(p=>p.type==='spacer').length;
+  document.getElementById('plant-count').textContent=cnt+' plant'+(cnt!==1?'s':'')+' placed'+(spacerCnt?' · '+spacerCnt+' spacer'+(spacerCnt!==1?'s':''):'');
   renderGardenList();
 }
 
