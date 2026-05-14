@@ -1135,9 +1135,9 @@ function updatePlacedList(){
   let html = '';
   plants.forEach(({ name, count }) => {
     html += `<div class="placed-item">
-      <span style="display:inline-flex;align-items:center;gap:6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-        <span style="background:#2d5a1b;color:#fff;border-radius:8px;padding:1px 7px;font-size:11px;font-weight:700;flex-shrink:0;">${count}</span>
-        <span style="color:#2d5a1b;font-weight:500;">${name}</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;flex:1;min-width:0;">
+        <span style="background:#2d5a1b;color:#fff;border-radius:6px;padding:0px 5px;font-size:10px;font-weight:700;flex-shrink:0;line-height:16px;">${count}</span>
+        <span style="color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${name}</span>
       </span>
     </div>`;
   });
