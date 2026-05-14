@@ -105,7 +105,7 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 .placed-lock{background:none;border:none;cursor:pointer;font-size:11px;padding:0 2px;opacity:0.4;flex-shrink:0;}
 .placed-lock.locked{opacity:1;}
 .placed-item span{color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.placed-badge{background:#2d5a1b;color:#fff;border-radius:5px;padding:0 5px;font-size:10px;font-weight:700;flex-shrink:0;line-height:16px;min-width:18px;text-align:center;}
+.placed-badge{background:#fff;color:#2d5a1b;border:1.5px solid #2d5a1b;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700;flex-shrink:0;line-height:15px;min-width:20px;text-align:center;}
 .placed-name{font-size:12px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
 #error-banner{display:none;background:#fcebeb;border:1px solid #f09595;border-radius:8px;padding:10px 14px;margin:8px;font-size:12px;color:#501313;line-height:1.6;}
 #error-banner strong{font-weight:600;}
@@ -275,7 +275,10 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
     <h3>Plant info</h3>
     <div id="plant-detail"><div style="font-size:12px;color:#aaa;font-style:italic;">Hover a plant card or click a placed plant.</div></div>
     <div id="placed-list">
-      <h3>In this bed</h3>
+      <h3 style="display:flex;justify-content:space-between;align-items:center;">
+        <span>In this bed</span>
+        <button id="clean-unknowns-btn" onclick="removeUnknownPlants()" title="Remove unknown plants" style="display:none;font-size:10px;padding:1px 7px;border:1px solid #cc6600;border-radius:4px;background:#fff8f0;color:#cc6600;cursor:pointer;font-weight:600;">✕ Clean up</button>
+      </h3>
       <div id="placed-summary"><div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div></div>
     </div>
   </div>
@@ -1153,6 +1156,39 @@ function updatePlacedList(){
     });
   }
   el.innerHTML = html;
+  // Show clean-up button if any unknowns exist
+  const hasUnknown = plants.some(p => p.unknown);
+  const cleanBtn = document.getElementById('clean-unknowns-btn');
+  if (cleanBtn) cleanBtn.style.display = hasUnknown ? 'inline-block' : 'none';
+}
+
+function removeUnknownPlants(){
+  const g = garden();
+  if (!g) return;
+  const before = g.placed.length;
+  g.placed = g.placed.filter(item => {
+    if (item.type === 'spacer') return true;
+    return !!PLANTS.find(x => x.id === item.pid);
+  });
+  const removed = before - g.placed.length;
+  renderCanvas();
+  updatePlacedList();
+  scheduleSave();
+  if (removed > 0) showToast(`Removed ${removed} unknown plant${removed !== 1 ? 's' : ''} from bed`);
+}
+
+function showToast(msg){
+  let t = document.getElementById('toast-msg');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast-msg';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2e1a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.opacity = '0', 2500);
 }
 
 function toggleLock(i){
