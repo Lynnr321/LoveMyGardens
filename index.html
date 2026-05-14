@@ -1163,18 +1163,28 @@ function updatePlacedList(){
 }
 
 function removeUnknownPlants(){
+  console.log('removeUnknownPlants called');
   const g = garden();
-  if (!g) return;
+  if (!g) { console.log('no garden'); return; }
+  console.log('placed before:', g.placed.length);
+  console.log('PLANTS loaded:', PLANTS.length);
+  g.placed.forEach((item,i) => {
+    if (item.type === 'spacer') return;
+    const found = PLANTS.find(x => x.id === item.pid);
+    if (!found) console.log('Unknown pid:', item.pid);
+  });
   const before = g.placed.length;
   g.placed = g.placed.filter(item => {
     if (item.type === 'spacer') return true;
     return !!PLANTS.find(x => x.id === item.pid);
   });
   const removed = before - g.placed.length;
+  console.log('removed:', removed, 'placed after:', g.placed.length);
   renderCanvas();
   updatePlacedList();
   scheduleSave();
-  if (removed > 0) showToast(`Removed ${removed} unknown plant${removed !== 1 ? 's' : ''} from bed`);
+  if (removed > 0) showToast('Removed ' + removed + ' unknown plant' + (removed !== 1 ? 's' : '') + ' from bed');
+  else showToast('No unknown plants found — try reloading plants first');
 }
 
 function showToast(msg){
