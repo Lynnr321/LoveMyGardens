@@ -101,11 +101,12 @@ input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius
 .pd-desc{margin-top:8px;font-size:11px;color:#666;line-height:1.5;}
 #placed-list{margin-top:14px;}
 #placed-list h3{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
-.placed-item{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;border-bottom:1px solid #f0efe8;}
-.placed-lock{background:none;border:none;cursor:pointer;font-size:12px;padding:0 3px;opacity:0.4;flex-shrink:0;}
+.placed-item{display:flex;align-items:center;padding:2px 0;border-bottom:1px solid #f0efe8;gap:5px;min-width:0;}
+.placed-lock{background:none;border:none;cursor:pointer;font-size:11px;padding:0 2px;opacity:0.4;flex-shrink:0;}
 .placed-lock.locked{opacity:1;}
-.placed-item span{color:#444;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.placed-count{background:#2d5a1b;color:#fff;border-radius:8px;padding:1px 6px;font-size:11px;font-weight:600;margin-left:4px;}
+.placed-item span{color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.placed-badge{background:#2d5a1b;color:#fff;border-radius:5px;padding:0 5px;font-size:10px;font-weight:700;flex-shrink:0;line-height:16px;min-width:18px;text-align:center;}
+.placed-name{font-size:12px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
 #error-banner{display:none;background:#fcebeb;border:1px solid #f09595;border-radius:8px;padding:10px 14px;margin:8px;font-size:12px;color:#501313;line-height:1.6;}
 #error-banner strong{font-weight:600;}
 #error-banner code{font-family:monospace;font-size:11px;background:rgba(0,0,0,0.07);padding:1px 4px;border-radius:3px;}
@@ -1117,9 +1118,10 @@ function getPlantCounts(g) {
       spacers.push({ label: item.label || 'Spacer', idx: i, locked: !!item.locked });
     } else {
       const p = PLANTS.find(x => x.id === item.pid);
-      const name = p ? p.name : item.pid;
-      if (!counts[name]) counts[name] = { name, count: 0, locked: false };
-      counts[name].count++;
+      const name = p ? p.name : null;
+      const key = name || ('unknown:' + item.pid);
+      if (!counts[key]) counts[key] = { name: name || item.pid, count: 0, unknown: !name };
+      counts[key].count++;
     }
   });
   const sorted = Object.values(counts).sort((a, b) => a.name.localeCompare(b.name));
@@ -1133,12 +1135,12 @@ function updatePlacedList(){
   if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>'; return; }
   const { plants, spacers } = getPlantCounts(g);
   let html = '';
-  plants.forEach(({ name, count }) => {
+  plants.forEach(({ name, count, unknown }) => {
+    const displayName = unknown ? '⚠ Unknown plant' : name;
+    const nameColor = unknown ? '#cc6600' : '#333';
     html += `<div class="placed-item">
-      <span style="display:inline-flex;align-items:center;gap:5px;flex:1;min-width:0;">
-        <span style="background:#2d5a1b;color:#fff;border-radius:6px;padding:0px 5px;font-size:10px;font-weight:700;flex-shrink:0;line-height:16px;">${count}</span>
-        <span style="color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;">${name}</span>
-      </span>
+      <span class="placed-badge">${count}</span>
+      <span class="placed-name" style="color:${nameColor}">${displayName}</span>
     </div>`;
   });
   if (spacers.length) {
