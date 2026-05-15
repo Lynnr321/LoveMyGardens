@@ -3,1557 +3,928 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>My Native Garden Planner</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='56'>🌿</text></svg>">
+<title>Native Plant Entry Tool — MyNativeGardenPlanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a1a;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
-#topbar{background:#fff;border-bottom:1px solid #e0dfd8;padding:0 14px;height:52px;display:flex;align-items:center;gap:10px;flex-shrink:0;overflow-x:auto;}
-#topbar h1{font-size:15px;font-weight:600;color:#2d5a1b;flex-shrink:0;display:flex;align-items:center;gap:6px;}
-.tb-sep{width:1px;height:20px;background:#e0dfd8;flex-shrink:0;}
-.tb-label{font-size:12px;color:#888;white-space:nowrap;flex-shrink:0;}
-input[type=number]{width:52px;height:28px;border:1px solid #d0cfc8;border-radius:6px;font-size:13px;text-align:center;background:#fafaf8;}
-.tb-btn{height:28px;padding:0 11px;border:1px solid #d0cfc8;border-radius:6px;font-size:12px;background:#fff;cursor:pointer;white-space:nowrap;color:#333;flex-shrink:0;}
-.tb-btn:hover{background:#f5f4f0;}
-.tb-btn.primary{background:#2d5a1b;color:#fff;border-color:#2d5a1b;}
-.tb-btn.primary:hover{background:#234514;}
-.tb-btn.danger{color:#a32d2d;border-color:#e5b0aa;}
-.tb-btn.danger:hover{background:#fdf0ef;}
-#bed-name-input{font-size:13px;border:1px solid #d0cfc8;border-radius:6px;height:28px;padding:0 8px;width:120px;background:#fafaf8;}
-#spacer{flex:1;min-width:8px;}
-#plant-count{font-size:12px;color:#666;white-space:nowrap;flex-shrink:0;}
-#save-status{font-size:11px;white-space:nowrap;flex-shrink:0;padding:3px 9px;border-radius:4px;}
-.ss-idle{background:#f1efe8;color:#888;}
-.ss-saving{background:#faeeda;color:#854f0b;}
-.ss-saved{background:#eaf3de;color:#3b6d11;}
-.ss-error{background:#fcebeb;color:#a32d2d;}
-#zoom-row{display:flex;align-items:center;gap:5px;flex-shrink:0;}
-.zoom-btn{width:26px;height:26px;border:1px solid #d0cfc8;border-radius:6px;font-size:14px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333;}
-.zoom-btn:hover{background:#f5f4f0;}
-#zoom-label{font-size:12px;color:#666;min-width:36px;text-align:center;}
-#main{display:flex;flex:1;overflow:hidden;}
-#sidebar{width:230px;background:#fff;border-right:1px solid #e0dfd8;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
-#gardens-section{border-bottom:1px solid #e0dfd8;flex-shrink:0;}
-#gardens-header{padding:8px 12px 4px;display:flex;align-items:center;justify-content:space-between;}
-#gardens-header span{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;}
-#add-garden-btn{font-size:11px;padding:2px 8px;border:1px solid #d0cfc8;border-radius:5px;background:#fff;cursor:pointer;color:#2d5a1b;font-weight:500;}
-#add-garden-btn:hover{background:#eaf3de;}
-#garden-list{padding:4px 8px 8px;max-height:190px;overflow-y:auto;}
-.garden-row{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:7px;cursor:pointer;user-select:none;}
-.garden-row:hover{background:#f5f4f0;}
-.garden-row.active{background:#eaf3de;}
-.garden-dot{width:8px;height:8px;border-radius:50%;background:#c0d8a8;flex-shrink:0;}
-.garden-row.active .garden-dot{background:#2d5a1b;}
-.garden-row-name{flex:1;font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.garden-row.active .garden-row-name{color:#1a4a0a;font-weight:500;}
-.garden-row-meta{font-size:10px;color:#aaa;white-space:nowrap;}
-.garden-del{width:18px;height:18px;border:none;background:none;cursor:pointer;color:#ccc;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0;}
-.garden-del:hover{color:#fff;background:#e24b4a;}
-#plants-section{display:flex;flex-direction:column;flex:1;overflow:hidden;}
-#plants-header{padding:8px 12px 6px;border-bottom:1px solid #e0dfd8;flex-shrink:0;}
-#plants-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-#plants-header-top span{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;}
-#data-status{font-size:10px;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;gap:4px;}
-.status-loading{background:#faeeda;color:#854f0b;}
-.status-ok{background:#eaf3de;color:#3b6d11;}
-.status-err{background:#fcebeb;color:#a32d2d;}
-.spinner{width:8px;height:8px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
-@keyframes spin{to{transform:rotate(360deg);}}
-#search{width:100%;height:28px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;background:#fafaf8;margin-bottom:6px;}
-#filter-row{display:flex;gap:4px;flex-wrap:wrap;}
-.filter-btn{font-size:11px;padding:2px 7px;border:1px solid #d0cfc8;border-radius:10px;background:#fff;cursor:pointer;color:#555;white-space:nowrap;}
-.filter-btn.active{background:#2d5a1b;color:#fff;border-color:#2d5a1b;}
-#plant-list{flex:1;overflow-y:auto;padding:6px;}
-.plant-card{border:1px solid #e0dfd8;border-radius:8px;padding:7px 9px;margin-bottom:5px;cursor:grab;background:#fff;user-select:none;transition:border-color 0.15s;}
-.plant-card:hover{border-color:#2d5a1b;box-shadow:0 1px 4px rgba(45,90,27,0.12);}
-.plant-card.dragging{opacity:0.4;}
-.pc-img{width:34px;height:34px;border-radius:5px;object-fit:cover;float:right;margin-left:6px;background:#e8f5e0;}
-.pc-name{font-size:13px;font-weight:500;color:#1a1a1a;line-height:1.3;}
-.pc-sci{font-size:11px;color:#888;font-style:italic;margin-top:1px;}
-.pc-tags{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap;clear:both;}
-.pc-tag{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500;}
-.tag-sun{background:#faeeda;color:#854f0b;}
-.tag-part{background:#e1f5ee;color:#0f6e56;}
-.tag-shade{background:#e6f1fb;color:#185fa5;}
-.tag-size{background:#f1efe8;color:#5f5e5a;}
-.tag-bloom{background:#fbeaf0;color:#993556;}
-#canvas-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-#toolbar-row{background:#fff;border-bottom:1px solid #e0dfd8;padding:6px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;}
-.tg-label{font-size:11px;color:#aaa;margin-right:2px;white-space:nowrap;}
-.tool-btn{height:28px;padding:0 10px;border:1px solid #d0cfc8;border-radius:6px;font-size:12px;background:#fff;cursor:pointer;color:#333;display:flex;align-items:center;gap:5px;white-space:nowrap;}
-.tool-btn:hover{background:#f5f4f0;}
-.tool-btn.active{background:#2d5a1b;color:#fff;border-color:#2d5a1b;}
-#tool-hint{font-size:11px;color:#bbb;white-space:nowrap;}
-#canvas-area{flex:1;overflow:auto;padding:16px 20px;background:#f5f4f0;display:flex;flex-direction:column;align-items:flex-start;}
-#legend{display:flex;gap:10px;font-size:11px;color:#999;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0;align-items:center;}
-.leg-item{display:flex;align-items:center;gap:4px;}
-.leg-circle{width:9px;height:9px;border-radius:50%;border:1.5px solid;}
-#garden-canvas{display:block;}
-#info-panel{width:210px;background:#fff;border-left:1px solid #e0dfd8;padding:14px;overflow-y:auto;flex-shrink:0;}
-#info-panel h3{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;}
-.pd-img{width:100%;height:90px;object-fit:cover;border-radius:7px;margin-bottom:8px;background:#e8f5e0;}
-.pd-name{font-size:14px;font-weight:600;color:#2d5a1b;margin-bottom:2px;}
-.pd-sci{font-size:12px;color:#888;font-style:italic;margin-bottom:8px;}
-.pd-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0efe8;font-size:12px;}
-.pd-label{color:#888;}
-.pd-val{color:#333;font-weight:500;text-align:right;max-width:120px;}
-.pd-desc{margin-top:8px;font-size:11px;color:#666;line-height:1.5;}
-#placed-list{margin-top:14px;}
-#placed-list h3{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
-.placed-item{display:flex;align-items:center;padding:2px 0;border-bottom:1px solid #f0efe8;gap:5px;min-width:0;}
-.placed-lock{background:none;border:none;cursor:pointer;font-size:11px;padding:0 2px;opacity:0.4;flex-shrink:0;}
-.placed-lock.locked{opacity:1;}
-.placed-item span{color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.placed-badge{background:#fff;color:#2d5a1b;border:1.5px solid #2d5a1b;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700;flex-shrink:0;line-height:15px;min-width:20px;text-align:center;}
-.placed-name{font-size:12px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
-#error-banner{display:none;background:#fcebeb;border:1px solid #f09595;border-radius:8px;padding:10px 14px;margin:8px;font-size:12px;color:#501313;line-height:1.6;}
-#error-banner strong{font-weight:600;}
-#error-banner code{font-family:monospace;font-size:11px;background:rgba(0,0,0,0.07);padding:1px 4px;border-radius:3px;}
-#tooltip{position:fixed;background:rgba(30,30,30,0.88);color:#fff;font-size:11px;padding:4px 8px;border-radius:5px;pointer-events:none;z-index:999;display:none;white-space:nowrap;}
-#loading-screen{position:fixed;inset:0;background:#f5f4f0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:12px;}
-#loading-screen .ls-title{font-size:15px;color:#2d5a1b;font-weight:600;}
-#ls-status{font-size:12px;color:#888;min-height:18px;}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-.spacer-btn{height:28px;padding:0 10px;border:1px solid #d0cfc8;border-radius:6px;font-size:11px;background:#fff8ee;cursor:pointer;white-space:nowrap;}
-.spacer-btn:hover{background:#ffe8c0;border-color:#cc9900;}
-.spacer-item{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;font-weight:600;color:#fff;text-align:center;}
+  :root {
+    --green-dark: #1a2e1a;
+    --green-mid: #2d4a2d;
+    --green-light: #4a7c4a;
+    --green-pale: #e8f0e8;
+    --green-accent: #6aab5e;
+    --cream: #f8f5ef;
+    --warm-white: #fdfcf9;
+    --text-primary: #1a2e1a;
+    --text-secondary: #5a6e5a;
+    --text-muted: #8a9e8a;
+    --border: #d0ddd0;
+    --border-light: #e4ede4;
+    --danger: #c0392b;
+    --warning-bg: #fff8e6;
+    --warning-border: #e6c84a;
+    --warning-text: #7a6010;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow: 0 2px 12px rgba(26,46,26,0.08);
+    --shadow-lg: 0 8px 32px rgba(26,46,26,0.12);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text-primary);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--green-dark);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--cream);
+    letter-spacing: 0.01em;
+    font-weight: 500;
+  }
+  header h1 span { color: var(--green-accent); font-style: italic; }
+  .header-badge {
+    font-size: 11px;
+    background: rgba(106,171,94,0.2);
+    color: var(--green-accent);
+    border: 1px solid rgba(106,171,94,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-weight: 500;
+  }
+
+  /* ── API Key Banner ── */
+  #api-banner {
+    background: var(--warning-bg);
+    border-bottom: 1px solid var(--warning-border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  #api-banner p { font-size: 13px; color: var(--warning-text); flex: 1; min-width: 200px; }
+  #api-banner p a { color: var(--warning-text); text-decoration: underline; }
+  .api-key-row { display: flex; gap: 8px; align-items: center; }
+  .api-key-row input {
+    font-family: 'DM Sans', monospace;
+    font-size: 12px;
+    padding: 7px 12px;
+    border: 1px solid var(--warning-border);
+    border-radius: var(--radius);
+    background: white;
+    color: var(--text-primary);
+    width: 280px;
+  }
+  .api-key-row input:focus { outline: none; border-color: var(--green-light); }
+  #api-saved-msg { font-size: 12px; color: #2d7a2d; font-weight: 500; display: none; }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 28px 24px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+  .tab {
+    padding: 10px 22px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--green-dark); border-bottom-color: var(--green-accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Lookup section ── */
+  .lookup-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .lookup-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--green-dark);
+  }
+  .lookup-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+
+  .lookup-mode-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    width: fit-content;
+  }
+  .mode-btn {
+    padding: 7px 18px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .mode-btn.active { background: var(--green-dark); color: white; }
+
+  .search-row { display: flex; gap: 10px; align-items: stretch; }
+  .search-row input {
+    flex: 1;
+    font-size: 15px;
+    padding: 11px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: white;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s;
+  }
+  .search-row input:focus { outline: none; border-color: var(--green-light); }
+  .search-row input::placeholder { color: var(--text-muted); font-style: italic; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:hover { background: var(--green-pale); border-color: var(--green-light); }
+  .btn-primary { background: var(--green-dark); color: white; border-color: var(--green-dark); }
+  .btn-primary:hover { background: var(--green-mid); border-color: var(--green-mid); }
+  .btn-success { background: #2d7a2d; color: white; border-color: #2d7a2d; }
+  .btn-success:hover { background: #256425; }
+  .btn-export { background: #1a4a7a; color: white; border-color: #1a4a7a; }
+  .btn-export:hover { background: #153d66; }
+  .btn-danger { color: var(--danger); border-color: #e8d0d0; }
+  .btn-danger:hover { background: #fdf0f0; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+  /* ── Status / Loading ── */
+  #ai-status { margin: 10px 0; min-height: 30px; }
+  .ai-loading { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); padding: 6px 0; }
+  .dot-pulse { display: flex; gap: 4px; }
+  .dot-pulse span { width: 6px; height: 6px; border-radius: 50%; background: var(--green-accent); animation: dp 1.2s infinite; }
+  .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dp { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+  .error-msg { color: var(--danger); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .warn-msg {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    color: var(--warning-text);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .warn-msg button { margin-left: auto; font-size: 12px; padding: 4px 10px; }
+
+  /* ── Entry Form ── */
+  #entry-form {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .form-section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 18px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .form-section-title:first-child { margin-top: 0; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-full { grid-column: 1 / -1; }
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-group label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .field-group input, .field-group textarea {
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: white;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .field-group input:focus, .field-group textarea:focus { outline: none; border-color: var(--green-light); }
+  .field-group textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
 
 
-@keyframes pulse {
-  0%,100%{opacity:1;} 50%{opacity:0.7;}
-}
+  .img-size-badge {
+    font-size: 10px;
+    background: var(--green-pale);
+    color: var(--green-light);
+    border-radius: 20px;
+    padding: 2px 8px;
+    display: inline-block;
+  }
+
+  /* ── Save Row ── */
+  .save-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  /* ── Library ── */
+  .library-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .library-info { font-size: 13px; color: var(--text-secondary); }
+  .export-hint {
+    background: #eaf3ff;
+    border: 1px solid #b0ccee;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #2a4a7a;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .plant-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+  .plant-card:hover { box-shadow: var(--shadow-lg); }
+  .plant-card-header {
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: white;
+    border-bottom: 1px solid transparent;
+    transition: background 0.15s;
+  }
+  .plant-card-header:hover { background: var(--green-pale); }
+  .plant-card-header.open { border-bottom-color: var(--border-light); }
+  .plant-card-header h3 { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .plant-card-header .sci { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+  .plant-card-body { display: none; padding: 16px 18px; }
+  .plant-card-body.open { display: block; }
+
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size: 13px; }
+  .mini-field { display: flex; flex-direction: column; gap: 2px; }
+  .mini-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+  .mini-value { color: var(--text-primary); }
+  .mini-full { grid-column: 1/-1; }
+
+  .card-img-row { display: flex; gap: 10px; margin-top: 12px; }
+  .card-img-wrap { flex: 1; }
+  .card-img-wrap img { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-light); }
+  .card-img-wrap .mini-label { margin-bottom: 4px; }
+  .card-img-empty { width: 100%; height: 100px; background: var(--green-pale); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); border: 1px solid var(--border-light); }
+
+  /* ── Chips ── */
+  .chip {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .chip-id { background: #e8f0ff; color: #2a4a9a; }
+  .chip-saved { background: #e6f4e6; color: #2a6a2a; }
+  .chip-dupe { background: #fff3e0; color: #9a5a00; }
+
+  /* ── Chevron ── */
+  .chevron { display: inline-block; transition: transform 0.2s; font-style: normal; }
+  .chevron.open { transform: rotate(180deg); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--green-dark);
+    color: white;
+    padding: 12px 22px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 9999;
+    box-shadow: var(--shadow-lg);
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Empty state ── */
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; line-height: 1.7; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--green-pale); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 </head>
 <body>
-<!-- FIREBASE AUTH OVERLAY - insert after <body> tag -->
-<div id="auth-screen" style="position:fixed;inset:0;background:#f5f4f0;display:flex;align-items:center;justify-content:center;z-index:200;">
-  <div style="background:#fff;border-radius:16px;padding:36px 32px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,0.10);border:1px solid #e0dfd8;">
-    <div style="text-align:center;margin-bottom:24px;">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2d5a1b" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a9 9 0 0 0-4 17.1V21h8v-1.9A9 9 0 0 0 12 2z"/><path d="M9 21v1h6v-1"/><path d="M12 7v5l3 3"/></svg>
-      <div style="font-size:18px;font-weight:700;color:#2d5a1b;margin-top:8px;">My Native Garden Planner</div>
-      <div style="font-size:13px;color:#888;margin-top:4px;">Sign in to your garden</div>
-    </div>
 
-    <div id="auth-error" style="display:none;background:#fcebeb;border:1px solid #f09595;border-radius:8px;padding:9px 12px;font-size:12px;color:#a32d2d;margin-bottom:14px;"></div>
+<header>
+  <h1>🌿 My Native Garden <span>Planner</span> — Plant Entry</h1>
+  <span class="header-badge">Admin Tool</span>
+</header>
 
-    <!-- Login Form -->
-    <div id="login-form">
-      <input id="login-email" type="email" placeholder="Email address" style="width:100%;height:40px;border:1px solid #d0cfc8;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:10px;background:#fafaf8;box-sizing:border-box;">
-      <input id="login-password" type="password" placeholder="Password" style="width:100%;height:40px;border:1px solid #d0cfc8;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:6px;background:#fafaf8;box-sizing:border-box;">
-      <div style="text-align:right;margin-bottom:16px;">
-        <a href="#" onclick="showForgot()" style="font-size:12px;color:#2d5a1b;text-decoration:none;">Forgot password?</a>
-      </div>
-      <button onclick="doLogin()" style="width:100%;height:40px;background:#2d5a1b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">Sign In</button>
-      <button onclick="doGoogleLogin()" style="width:100%;height:40px;background:#fff;color:#333;border:1px solid #d0cfc8;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div style="text-align:center;font-size:13px;color:#888;">Don't have an account? <a href="#" onclick="showSignup()" style="color:#2d5a1b;font-weight:600;text-decoration:none;">Sign up free</a></div>
-    </div>
-
-    <!-- Signup Form -->
-    <div id="signup-form" style="display:none;">
-      <input id="signup-email" type="email" placeholder="Email address" style="width:100%;height:40px;border:1px solid #d0cfc8;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:10px;background:#fafaf8;box-sizing:border-box;">
-      <input id="signup-password" type="password" placeholder="Password (min 6 characters)" style="width:100%;height:40px;border:1px solid #d0cfc8;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:10px;background:#fafaf8;box-sizing:border-box;">
-      <input id="signup-password2" type="password" placeholder="Confirm password" style="width:100%;height:40px;border:1px solid #d0cfc8;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:16px;background:#fafaf8;box-sizing:border-box;">
-      <button onclick="doSignup()" style="width:100%;height:40px;background:#2d5a1b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">Create Account</button>
-      <button onclick="doGoogleLogin()" style="width:100%;height:40px;background:#fff;color:#333;border:1px solid #d0cfc8;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div style="text-align:center;font-size:13px;color:#888;">Already have an account? <a href="#" onclick="showLogin()" style="color:#2d5a1b;font-weight:600;text-decoration:none;">Sign in</a></div>
-    </div>
-
-    <!-- Forgot Password Form -->
-    <div id="forgot-form" style="display:none;">
-      <div style="font-size:13px;color:#555;margin-bottom:14px;">Enter your email and we'll send you a reset link.</div>
-      <input id="forgot-email" type="email" placeholder="Email address" style="width:100%;height:40px;border:1px solid #d0cfc8;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:16px;background:#fafaf8;box-sizing:border-box;">
-      <button onclick="doForgot()" style="width:100%;height:40px;background:#2d5a1b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:16px;">Send Reset Link</button>
-      <div style="text-align:center;"><a href="#" onclick="showLogin()" style="font-size:13px;color:#2d5a1b;text-decoration:none;">Back to sign in</a></div>
-    </div>
+<div id="api-banner">
+  <p>🔑 <strong>Anthropic API key required</strong> to use AI lookup. Get yours at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Key is stored in your browser only.</p>
+  <div class="api-key-row">
+    <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" />
+    <button class="btn btn-sm btn-primary" onclick="saveApiKey()">Save key</button>
+    <span id="api-saved-msg">✓ Key saved</span>
   </div>
 </div>
+<div id="sheet-load-status" style="text-align:center;font-size:12px;color:var(--text-secondary);padding:6px 32px;background:var(--cream);min-height:24px;"></div>
 
-
-<div id="loading-screen">
-  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2d5a1b" stroke-width="1.5" stroke-linecap="round">
-    <path d="M12 2a9 9 0 0 0-4 17.1V21h8v-1.9A9 9 0 0 0 12 2z"/>
-    <line x1="12" y1="12" x2="12" y2="21"/>
-    <path d="M12 12 Q8 8 6 4"/><path d="M12 12 Q16 8 18 4"/>
-  </svg>
-  <div class="ls-title">My Native Garden Planner</div>
-  <div id="ls-status">Connecting to Google Sheets…</div>
-</div>
-
-<div id="topbar">
-  <h1>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2d5a1b" stroke-width="2" stroke-linecap="round"><path d="M12 2a9 9 0 0 0-4 17.1V21h8v-1.9A9 9 0 0 0 12 2z"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M12 12 Q8 8 6 4"/><path d="M12 12 Q16 8 18 4"/></svg>
-    My Native Garden Planner
-  </h1>
-  <div class="tb-sep"></div>
-  <span class="tb-label">Bed:</span>
-  <input type="text" id="bed-name-input" placeholder="Bed name" value="" />
-  <div class="tb-sep"></div>
-  <div id="zoom-row">
-    <button class="zoom-btn" onclick="changeZoom(-0.25)">−</button>
-    <span id="zoom-label">100%</span>
-    <button class="zoom-btn" onclick="changeZoom(0.25)">+</button>
-    <button class="zoom-btn" onclick="fitZoom()" style="font-size:11px;width:32px;">fit</button>
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('add')">➕ Add New Plant</div>
+    <div class="tab" onclick="switchTab('library')">📋 Plant Library <span id="lib-count-badge" style="color:#8a9e8a;font-size:11px"></span></div>
   </div>
-  <div class="tb-sep"></div>
-  <button class="tb-btn" onclick="loadPlants()">↺ Reload plants</button>
-  <button class="tb-btn" onclick="exportPNG()">Export PNG</button>
-  <button class="tb-btn" onclick="cleanupStacked()" title="Remove stacked plants from top-left corner">Reset plants</button>
-  <button class="tb-btn" onclick="resetShape()" title="Reset bed outline back to a rectangle (keeps plants)">Reset bed</button>
-  <button class="tb-btn" onclick="resetPoints()" title="Reduce polygon to 4 corner points (keeps plants and bed shape)">Reset points</button>
-  <button class="tb-btn danger" onclick="clearGarden()">Clear bed</button>
-  <div id="spacer"></div>
-  <span id="save-status" class="ss-idle">Ready</span>
-  <span id="plant-count" style="margin-left:8px;">0 plants placed</span>
-</div>
 
-<div id="main">
-  <div id="sidebar">
-    <div id="gardens-section">
-      <div id="gardens-header">
-        <span>My Gardens</span>
-        <button id="add-garden-btn" onclick="addGarden()">+ Add bed</button>
+  <!-- ADD TAB -->
+  <div id="tab-add" class="tab-panel active">
+
+    <div class="lookup-card">
+      <h2>AI-Assisted Plant Entry</h2>
+      <p>Enter a common name or scientific name — AI will research and fill in all plant data fields automatically.</p>
+
+      <div class="lookup-mode-toggle">
+        <button class="mode-btn active" id="mode-common" onclick="setMode('common')">Common Name</button>
+        <button class="mode-btn" id="mode-sci" onclick="setMode('scientific')">Scientific Name</button>
       </div>
-      <div id="garden-list"></div>
+
+      <div class="search-row">
+        <input type="text" id="plant-name-input"
+          placeholder="e.g. Blue-eyed grass"
+          onkeydown="if(event.key==='Enter')lookupPlant()" />
+        <button class="btn btn-primary" onclick="lookupPlant()">✨ Fill with AI</button>
+      </div>
     </div>
-    <div id="plants-section">
-      <div id="plants-header">
-        <div id="plants-header-top">
-          <span>Plant Palette</span>
-          <span id="data-status" class="status-loading"><span class="spinner"></span> Loading…</span>
-        </div>
-        <input type="text" id="search" placeholder="Search plants…" oninput="renderPlantList()" />
-        <div id="filter-row">
-          <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
-          <button class="filter-btn" onclick="setFilter('full sun',this)">Full sun</button>
-          <button class="filter-btn" onclick="setFilter('part',this)">Part shade</button>
-          <button class="filter-btn" onclick="setFilter('shade',this)">Shade</button>
+
+    <div id="ai-status"></div>
+
+    <div id="entry-form" style="display:none">
+      <div class="form-section-title">Plant Identity</div>
+      <div class="field-grid">
+        <div class="field-group"><label>Plant ID</label><input id="f-id" readonly style="background:#f5f5f0;color:#8a9e8a" /></div>
+        <div class="field-group"><label>Common Name</label><input id="f-common" /></div>
+        <div class="field-group field-full"><label>Scientific / Latin Name</label><input id="f-sci" /></div>
+        <div class="field-group field-full"><label>Native to (US regions / states)</label><input id="f-native" /></div>
+      </div>
+
+      <div class="form-section-title">Growth & Habitat</div>
+      <div class="field-grid">
+        <div class="field-group"><label>Height</label><input id="f-tall" /></div>
+        <div class="field-group"><label>Spread / Width</label><input id="f-wide" /></div>
+        <div class="field-group"><label>Root System</label><input id="f-root" /></div>
+        <div class="field-group"><label>Spread / Growth Habit</label><input id="f-spread" /></div>
+        <div class="field-group"><label>Soil Type / Preferences</label><input id="f-soil" /></div>
+        <div class="field-group"><label>Sunlight</label><input id="f-sun" /></div>
+        <div class="field-group"><label>Bloom Period</label><input id="f-bloom" /></div>
+        <div class="field-group"><label>USDA Zones</label><input id="f-zones" /></div>
+        <div class="field-group field-full"><label>Propagation</label><input id="f-prop" /></div>
+      </div>
+
+      <div class="form-section-title">Description</div>
+      <div class="field-grid">
+        <div class="field-group field-full"><label>Description / Ecological Role</label><textarea id="f-desc"></textarea></div>
+      </div>
+
+      <div class="form-section-title">Photos</div>
+      <div style="background:var(--green-pale);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--text-secondary);line-height:1.7">
+        📱 <strong>Photos are added via the AppSheet app</strong> after the plant is saved here. Open <em>LoveMyGardens</em> in AppSheet, find the plant, and tap to upload the Plant Image and Seedling Image directly from your phone or tablet.
+        <br><a href="https://www.appsheet.com/Template/AppDef?appName=LoveMyGardens-1925796" target="_blank" style="color:var(--green-light);font-weight:500;text-decoration:none">→ Open AppSheet app</a>
+      </div>
+
+      <div class="save-row">
+        <button class="btn btn-sm" onclick="resetForm()">Clear</button>
+        <button class="btn btn-sm btn-success" onclick="savePlant()">✓ Save to library</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIBRARY TAB -->
+  <div id="tab-library" class="tab-panel">
+    <div id="library-empty" class="empty-state" style="display:none">
+      <div class="icon">🌿</div>
+      <p>No plants saved yet.<br>Add some from the entry tab.</p>
+    </div>
+    <div id="library-content" style="display:none">
+      <div class="export-hint">
+        📥 <strong>Export CSV</strong> to import into Google Sheets (which feeds your AppSheet app), or share with users who don't have a Google account. Column headers match your AppSheet field names. Image data is embedded as base64 in the CSV.
+      </div>
+      <div class="library-toolbar">
+        <span class="library-info" id="lib-count-text"></span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-export" onclick="exportCSV()">⬇ Export CSV + Summary</button>
+          <button class="btn btn-sm btn-primary" onclick="switchTab('add')">＋ Add Plant</button>
         </div>
       </div>
-      <div id="error-banner"></div>
-      <div id="plant-list"><div style="padding:14px;font-size:12px;color:#aaa;">Loading plant database…</div></div>
-    </div>
-  </div>
-
-  <div id="canvas-wrap">
-    <div id="toolbar-row">
-      <span class="tg-label">Tool:</span>
-      <button class="tool-btn active" id="tool-place" onclick="setTool('place')">🌱 Place plants</button>
-      <button class="tool-btn" id="tool-rect"  onclick="setTool('rect')">⬜ Rectangle bed</button>
-      <button class="tool-btn" id="tool-poly"  onclick="setTool('poly')">⬡ Freeform bed</button>
-      <button id="finish-shape-btn" onclick="finishPoly()" style="display:none;height:32px;padding:0 14px;background:#2d5a1b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;animation:pulse 1s infinite;">✓ Finish Shape</button>
-      <button class="tool-btn" id="tool-edit"  onclick="setTool('edit')">✥ Edit shape</button>
-      <button class="spacer-btn" onclick="addSpacer()" title="Add a non-plant object (septic, shed, etc)">+ Spacer</button>
-      <div class="tb-sep"></div>
-      <span class="tg-label">Canvas (ft):</span>
-      <span class="tg-label">W</span>
-      <input type="number" id="bed-w" value="20" min="2" max="300" style="width:52px;height:26px;" />
-      <span class="tg-label">D</span>
-      <input type="number" id="bed-d" value="12" min="2" max="300" style="width:52px;height:26px;" />
-      <button class="tb-btn" onclick="applyBedSettings()" style="height:26px;">Apply</button>
-      <div class="tb-sep"></div>
-      <span id="tool-hint" style="font-size:12px;color:#666;font-weight:500;">Drag a plant from the palette onto the bed</span>
-    </div>
-    <div id="canvas-area">
-      <div id="legend">
-        <div class="leg-item"><div class="leg-circle" style="background:#c8e6b0;border-color:#2d5a1b;"></div> Plant footprint</div>
-        <div class="leg-item"><div class="leg-circle" style="background:rgba(45,90,27,0.06);border-color:#7ab55a;border-style:dashed;"></div> Spacing zone</div>
-        <div class="leg-item"><div class="leg-circle" style="background:#fff8c0;border-color:#cc9900;"></div> Selected</div>
-        <span style="font-size:10px;color:#bbb;">Scroll to zoom · Select plant + Delete key to remove</span>
-      </div>
-      <canvas id="garden-canvas"></canvas>
-    </div>
-  </div>
-
-  <div id="info-panel">
-    <h3>Plant info</h3>
-    <div id="plant-detail"><div style="font-size:12px;color:#aaa;font-style:italic;">Hover a plant card or click a placed plant.</div></div>
-    <div id="placed-list">
-      <h3 style="display:flex;justify-content:space-between;align-items:center;">
-        <span>In this bed</span>
-        <button id="clean-unknowns-btn" onclick="removeUnknownPlants()" title="Remove unknown plants" style="display:none;font-size:10px;padding:1px 7px;border:1px solid #cc6600;border-radius:4px;background:#fff8f0;color:#cc6600;cursor:pointer;font-weight:600;">✕ Clean up</button>
-      </h3>
-      <div id="placed-summary"><div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div></div>
+      <div id="plant-cards"></div>
     </div>
   </div>
 </div>
-<div id="tooltip"></div>
 
-<script type="module">
+<div class="toast" id="toast"></div>
 
-// ── FIREBASE AUTH ──
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-         signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail,
-         signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCacTU3HKGMGGBFXuRKMpI__jKXKb39qHA",
-  authDomain: "my-native-garden-planner.firebaseapp.com",
-  projectId: "my-native-garden-planner",
-  storageBucket: "my-native-garden-planner.firebasestorage.app",
-  messagingSenderId: "122084561693",
-  appId: "1:122084561693:web:89d1638a0a324c1f50c7f4"
-};
+<script>
+// ── State ──
+const savedPlants = [];
+let nextId = 1001;
+let sheetPlants = []; // loaded from Google Sheets on startup
 
-const fbApp = initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
-const googleProvider = new GoogleAuthProvider();
-
-let currentUser = null;
-
-function showAuthError(msg) {
-  const el = document.getElementById('auth-error');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-function clearAuthError() {
-  document.getElementById('auth-error').style.display = 'none';
-}
-function showLogin() {
-  clearAuthError();
-  document.getElementById('login-form').style.display = 'block';
-  document.getElementById('signup-form').style.display = 'none';
-  document.getElementById('forgot-form').style.display = 'none';
-}
-function showSignup() {
-  clearAuthError();
-  document.getElementById('login-form').style.display = 'none';
-  document.getElementById('signup-form').style.display = 'block';
-  document.getElementById('forgot-form').style.display = 'none';
-}
-function showForgot() {
-  clearAuthError();
-  document.getElementById('login-form').style.display = 'none';
-  document.getElementById('signup-form').style.display = 'none';
-  document.getElementById('forgot-form').style.display = 'block';
-}
-
-async function doLogin() {
-  clearAuthError();
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  if (!email || !password) return showAuthError('Please enter email and password.');
+// ── Load existing plants from Google Sheets on startup ──
+async function loadSheetPlants() {
+  const key = getApiKey();
+  const statusEl = document.getElementById('sheet-load-status');
+  if (!APPS_SCRIPT_URL) return;
   try {
-    await signInWithEmailAndPassword(auth, email, password);
+    if (statusEl) statusEl.textContent = '⏳ Loading existing plants…';
+    const res = await fetch(APPS_SCRIPT_URL + '?action=getPlants', { method: 'GET' });
+    const data = await res.json();
+    if (data.plants && Array.isArray(data.plants)) {
+      sheetPlants = data.plants;
+      if (statusEl) statusEl.textContent = '✓ ' + sheetPlants.length + ' plants loaded from sheet';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+    }
   } catch(e) {
-    showAuthError(friendlyError(e.code));
+    if (statusEl) statusEl.textContent = '⚠ Could not load plant list — duplicate check will use session only';
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 4000);
   }
 }
+let lookupMode = 'common';
 
-async function doSignup() {
-  clearAuthError();
-  const email = document.getElementById('signup-email').value.trim();
-  const pw1 = document.getElementById('signup-password').value;
-  const pw2 = document.getElementById('signup-password2').value;
-  if (!email || !pw1) return showAuthError('Please fill in all fields.');
-  if (pw1 !== pw2) return showAuthError('Passwords do not match.');
-  if (pw1.length < 6) return showAuthError('Password must be at least 6 characters.');
-  try {
-    await createUserWithEmailAndPassword(auth, email, pw1);
-  } catch(e) {
-    showAuthError(friendlyError(e.code));
+// ── API Key ──
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return;
+  localStorage.setItem('anthropic_api_key', key);
+  document.getElementById('api-saved-msg').style.display = 'inline';
+  document.getElementById('api-key-input').value = '••••••••••••••••';
+  showToast('API key saved to browser');
+}
+function getApiKey() {
+  const stored = localStorage.getItem('anthropic_api_key');
+  if (stored) return stored;
+  return document.getElementById('api-key-input').value.trim();
+}
+// Load saved key on start
+window.addEventListener('load', () => {
+  const k = localStorage.getItem('anthropic_api_key');
+  if (k) {
+    document.getElementById('api-key-input').value = '••••••••••••••••';
+    document.getElementById('api-saved-msg').style.display = 'inline';
   }
-}
-
-async function doGoogleLogin() {
-  clearAuthError();
-  try {
-    await signInWithPopup(auth, googleProvider);
-  } catch(e) {
-    showAuthError(friendlyError(e.code));
-  }
-}
-
-async function doForgot() {
-  clearAuthError();
-  const email = document.getElementById('forgot-email').value.trim();
-  if (!email) return showAuthError('Please enter your email.');
-  try {
-    await sendPasswordResetEmail(auth, email);
-    document.getElementById('auth-error').style.background = '#eaf3de';
-    document.getElementById('auth-error').style.borderColor = '#a8d08d';
-    document.getElementById('auth-error').style.color = '#2d5a1b';
-    showAuthError('Reset link sent! Check your email.');
-  } catch(e) {
-    showAuthError(friendlyError(e.code));
-  }
-}
-
-async function doSignOut() {
-  await signOut(auth);
-}
-
-function friendlyError(code) {
-  const map = {
-    'auth/invalid-email': 'Invalid email address.',
-    'auth/user-not-found': 'No account found with that email.',
-    'auth/wrong-password': 'Incorrect password.',
-    'auth/email-already-in-use': 'An account with this email already exists.',
-    'auth/weak-password': 'Password must be at least 6 characters.',
-    'auth/too-many-requests': 'Too many attempts. Please try again later.',
-    'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
-    'auth/invalid-credential': 'Incorrect email or password.',
-  };
-  return map[code] || 'Something went wrong. Please try again.';
-}
-
-// Listen for auth state changes — this is the main gate
-onAuthStateChanged(auth, user => {
-  currentUser = user;
-  if (user) {
-    // User is signed in — hide auth screen, show app
-    document.getElementById('auth-screen').style.display = 'none';
-    // Add user info to topbar
-    updateUserBar(user);
-    // Now load gardens scoped to this user
-    initGardens();
-    loadPlants();
-  } else {
-    // Not signed in — show auth screen
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('loading-screen').style.display = 'none';
-  }
+  // Load existing plants from sheet for duplicate checking
+  loadSheetPlants();
 });
 
-function updateUserBar(user) {
-  const spacer = document.getElementById('spacer');
-  if (!spacer) return;
-  const existing = document.getElementById('user-bar');
-  if (existing) existing.remove();
-  const bar = document.createElement('div');
-  bar.id = 'user-bar';
-  bar.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
-  const email = user.email || user.displayName || 'User';
-  const short = email.length > 20 ? email.substring(0, 18) + '...' : email;
-  bar.innerHTML = `<span style="font-size:11px;color:#888;">${short}</span>
-    <button onclick="doSignOut()" style="height:26px;padding:0 10px;border:1px solid #d0cfc8;border-radius:6px;font-size:11px;background:#fff;cursor:pointer;color:#666;">Sign out</button>`;
-  spacer.parentNode.insertBefore(bar, spacer);
+// ── Mode Toggle ──
+function setMode(mode) {
+  lookupMode = mode;
+  document.getElementById('mode-common').classList.toggle('active', mode === 'common');
+  document.getElementById('mode-sci').classList.toggle('active', mode === 'scientific');
+  const input = document.getElementById('plant-name-input');
+  input.placeholder = mode === 'common'
+    ? 'e.g. Blue-eyed grass, Dutchman\'s Breeches…'
+    : 'e.g. Sisyrinchium angustifolium, Dicentra cucullaria…';
+  input.value = '';
 }
 
-const API = "/api";
-
-/* ── API fetch — proxied through our own server, no CORS issues ── */
-function jsonp(url){
-  // url already points to /api — just use regular fetch
-  const fetchUrl = url.includes('?') ? url + '&t=' + Date.now() : url + '?t=' + Date.now();
-  return fetch(fetchUrl, { cache: 'no-store' })
-    .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+// ── Tabs ──
+function switchTab(tab) {
+  ['add','library'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.querySelectorAll('.tab')[t==='add'?0:1].classList.toggle('active', t === tab);
+  });
+  if (tab === 'library') renderLibrary();
 }
 
-/* ── STATE ── */
-let PLANTS = [];
-let gardens = [];
-let currentGarden = 0;
-let appReady = false;
-let selectedIdx = null;
-let dragPlantId = null;
-let isDraggingPlaced = false, draggingPlacedIdx = null, dragOffset = {x:0,y:0};
-let isRotatingSpacер = false, rotatingSpacerIdx = null, rotateStartX = 0, rotateStartAngle = 0;
-let sunFilter = 'all';
-let zoom = 1.0;
-let activeTool = 'place';
-let isDrawingRect = false, rectStart = null;
-let polyPoints = [], isDrawingPoly = false;
-let mousePos = {x:0,y:0};
-let editingVertexIdx = null, isDraggingVertex = false;
-let saveTimer = null;
-
-const BASE_CELL = 14, PR = window.devicePixelRatio || 1;
-const canvas = document.getElementById('garden-canvas');
-const ctx = canvas.getContext('2d');
-
-function cell(){ return BASE_CELL * zoom; }
-function px(ft){ return ft * cell(); }
-function inToPx(i){ return (i/12)*cell(); }
-function garden(){ return gardens[currentGarden]; }
-function lsStatus(msg){ document.getElementById('ls-status').textContent = msg; }
-
-function isValidGarden(g){
-  return g && typeof g === 'object'
-    && typeof g.name === 'string' && g.name.trim() !== ''
-    && typeof g.w === 'number' && g.w > 0
-    && typeof g.d === 'number' && g.d > 0;
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function sanitizeGardens(raw){
-  if(!Array.isArray(raw)) return null;
-  const valid = raw.filter(isValidGarden).map(g => ({
-    name: g.name, w: g.w, d: g.d,
-    shape: g.shape || 'rect',
-    polygon: g.polygon || null,
-    placed: Array.isArray(g.placed) ? g.placed.filter(p => {
-      if (!p || typeof p.x !== 'number') return false;
-      if (p.type === 'spacer') return typeof p.w === 'number' && typeof p.h === 'number';
-      return !!p.pid;
-    }) : []
-  }));
-  return valid.length > 0 ? valid : null;
+// ── Duplicate check ──
+function findDuplicate(sciName) {
+  if (!sciName) return null;
+  const norm = sciName.trim().toLowerCase();
+  // Check sheet plants first (most complete)
+  const sheetMatch = sheetPlants.find(p => p.sci && p.sci.trim().toLowerCase() === norm);
+  if (sheetMatch) return { ...sheetMatch, source: 'sheet' };
+  // Fall back to session plants
+  const sessionMatch = savedPlants.find(p => p.sci && p.sci.trim().toLowerCase() === norm);
+  if (sessionMatch) return { ...sessionMatch, source: 'session' };
+  return null;
 }
 
-function defaultGarden(name='Front Bed', w=20, d=12){
-  return { name, w, d, shape:'rect', polygon:null, placed:[] };
-}
-
-function setSS(cls, txt){ const el=document.getElementById('save-status'); el.className='ss-'+cls; el.textContent=txt; }
-
-/* ── INIT ── */
-async function initGardens(){
-  lsStatus('Loading your gardens from Google Sheets…');
-  try {
-    const userId = currentUser ? currentUser.uid : 'anonymous';
-  const data = await jsonp(API + '?action=loadGardens&userId=' + encodeURIComponent(userId));
-    if(data && data.error) throw new Error(data.error);
-    const clean = sanitizeGardens(data);
-    if(clean){
-      gardens = clean;
-      lsStatus('✓ Loaded ' + gardens.length + ' garden' + (gardens.length !== 1 ? 's' : ''));
-    } else {
-      gardens = [defaultGarden()];
-      lsStatus('No saved gardens yet — starting fresh');
-    }
-  } catch(e){
-    gardens = [defaultGarden()];
-    lsStatus('Could not load saves — starting with empty bed');
-    console.warn('Garden load error:', e.message);
+// ── AI Lookup ──
+async function lookupPlant() {
+  const name = document.getElementById('plant-name-input').value.trim();
+  if (!name) { showToast('Please enter a plant name first'); return; }
+  const key = getApiKey();
+  if (!key || key.startsWith('••')) {
+    setStatus('<span class="error-msg">⚠ Please enter your Anthropic API key in the banner above first.</span>');
+    return;
   }
-  appReady = true;
-  document.getElementById('loading-screen').style.display = 'none';
-  currentGarden = 0;
-  syncInputs();
-  renderGardenList();
-  renderCanvas();
-  updatePlacedList();
-  setSS('saved','✓ Ready');
+
+  setStatus('<div class="ai-loading"><div class="dot-pulse"><span></span><span></span><span></span></div> Researching <strong style="margin-left:4px">' + name + '</strong>…</div>');
+  document.getElementById('entry-form').style.display = 'none';
+
+  const fieldDesc = lookupMode === 'common'
+    ? `The user provided the common name: "${name}". Return the correct scientific name and all other fields.`
+    : `The user provided the scientific/Latin name: "${name}". Return the correct common name and all other fields.`;
+
+  const prompt = `You are a native plant database assistant for a US native plants app.
+${fieldDesc}
+
+Return ONLY a valid JSON object with NO markdown, no explanation, no preamble. Keys must be exactly:
+common_name, scientific_name, height, width, root_system, spread_growth_habit, soil_type, propagation, sunlight, bloom_period, usda_zones, description, native_to
+
+Rules:
+- height: e.g. "12–18 inches" or "2–3 feet"
+- width: e.g. "6–12 inches" or "1–2 feet"
+- usda_zones: e.g. "3–8"
+- description: 2–3 sentences on ecological role, wildlife value, and garden use
+- native_to: US states or regions, concise (e.g. "Eastern US, Midwest")
+- All data must be accurate horticultural information`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'API error ' + res.status);
+    }
+
+    const data = await res.json();
+    let text = data.content.map(c => c.text || '').join('');
+    text = text.replace(/```json|```/g, '').trim();
+    const plant = JSON.parse(text);
+
+    // Duplicate check
+    const dupe = findDuplicate(plant.scientific_name);
+    if (dupe) {
+      const plantJson = JSON.stringify(plant).replace(/"/g, '&quot;');
+      const dupeJson = JSON.stringify(dupe).replace(/"/g, '&quot;');
+      setStatus(`<div class="warn-msg" style="flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="font-size:18px;flex-shrink:0">⚠️</span>
+          <div>
+            <strong>Duplicate scientific name detected</strong><br>
+            <em>${plant.scientific_name}</em> already exists in your sheet as:<br>
+            <strong style="font-size:15px;">${dupe.common_name || dupe.common}</strong>
+            ${dupe.plant_id || dupe.id ? '<span style="font-size:11px;background:#fff3cd;border-radius:4px;padding:1px 6px;margin-left:6px;">' + (dupe.plant_id || dupe.id) + '</span>' : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-success" onclick="mergeCommonName('${(dupe.plant_id || dupe.id)}','${(dupe.common_name || dupe.common).replace(/'/g,"\\'")}','${plant.common_name.replace(/'/g,"\\'")}')">
+            ✔ Add as alternate name: <em>${dupe.common_name || dupe.common} / ${plant.common_name}</em>
+          </button>
+          <button class="btn btn-sm" onclick="fillForm(${plantJson})">Save as separate entry</button>
+          <button class="btn btn-sm btn-danger" onclick="clearStatus()">Cancel</button>
+        </div>
+      </div>`);
+      return;
+    }
+
+    fillForm(plant);
+  } catch (e) {
+    setStatus('<span class="error-msg">⚠ ' + (e.message || 'Could not look up plant. Check your API key and try again.') + '</span>');
+  }
 }
 
-/* ── SAVE ── */
-async function saveGardens(){
-  if(!appReady || !gardens.length) return;
-  const clean = sanitizeGardens(gardens);
-  if(!clean){ setSS('error','⚠ Nothing valid to save'); return; }
-  setSS('saving','⟳ Saving…');
+function setStatus(html) {
+  document.getElementById('ai-status').innerHTML = html;
+}
+function clearStatus() {
+  document.getElementById('ai-status').innerHTML = '';
+}
+
+async function mergeCommonName(plantId, existingName, newName) {
+  const merged = existingName.trim() + ' / ' + newName.trim();
+  setStatus('<div class="ai-loading"><div class="dot-pulse"><span></span><span></span><span></span></div> Updating common name in Google Sheets…</div>');
   try {
-    const resp = await fetch('/api', {
+    await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'saveGardens', gardens: clean, userId: currentUser ? currentUser.uid : 'anonymous' })
+      body: JSON.stringify({ action: 'updateCommonName', plant_id: plantId, common_name: merged }),
+      mode: 'no-cors'
     });
-    const data = await resp.json();
-    if(data && data.ok){
-      setSS('saved','✓ Saved ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
-    } else {
-      throw new Error((data && data.error) || 'Unknown error');
-    }
-  } catch(e){
-    setSS('error','⚠ Save failed: ' + e.message);
+    // Update local sheetPlants cache
+    const idx = sheetPlants.findIndex(p => (p.plant_id || p.id) === plantId);
+    if (idx >= 0) sheetPlants[idx].common_name = merged;
+    clearStatus();
+    showToast('✓ Common name updated to: ' + merged);
+  } catch(e) {
+    setStatus('<span class="error-msg">⚠ Could not update — check your connection and try again.</span>');
   }
 }
 
-function scheduleSave(){
-  if(!appReady) return;
-  setSS('saving','● Unsaved changes');
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveGardens, 1500);
+function fillForm(plant) {
+  clearStatus();
+  document.getElementById('entry-form').style.display = 'block';
+  document.getElementById('f-id').value = 'PLT-' + nextId;
+  document.getElementById('f-common').value = plant.common_name || '';
+  document.getElementById('f-sci').value = plant.scientific_name || '';
+  document.getElementById('f-tall').value = plant.height || '';
+  document.getElementById('f-wide').value = plant.width || '';
+  document.getElementById('f-root').value = plant.root_system || '';
+  document.getElementById('f-spread').value = plant.spread_growth_habit || '';
+  document.getElementById('f-soil').value = plant.soil_type || '';
+  document.getElementById('f-prop').value = plant.propagation || '';
+  document.getElementById('f-sun').value = plant.sunlight || '';
+  document.getElementById('f-bloom').value = plant.bloom_period || '';
+  document.getElementById('f-zones').value = plant.usda_zones || '';
+  document.getElementById('f-native').value = plant.native_to || '';
+  document.getElementById('f-desc').value = plant.description || '';
 }
 
-/* ── PLANTS ── */
-function parseSize(s){
-  if(!s) return 18;
-  const nums=(s.match(/([\d.]+)/g)||[]).map(Number).filter(n=>n>0);
-  if(!nums.length) return 18;
-  return Math.round(nums.reduce((a,b)=>a+b,0)/nums.length*(s.toLowerCase().includes('ft')||s.includes("'")?12:1));
+function resetForm() {
+  document.getElementById('entry-form').style.display = 'none';
+  clearStatus();
+  document.getElementById('plant-name-input').value = '';
 }
 
-function norm(r){
-  const g=(...k)=>{ for(const key of k){ if(r[key]!==undefined&&r[key]!=='') return String(r[key]); } return ''; };
-  return {
-    id:   g('Plant ID','Plant Id','ID'),
-    name: g('Common Name','Name'),
-    sci:  g('Scientific Name','Scientific'),
-    tall: parseSize(g('Size \u2013 Tall','Size - Tall','Height','Tall')),
-    wide: parseSize(g('Size \u2013 Wide','Size - Wide','Width','Wide')),
-    root: g('Root System','Root'),
-    spread: g('Spread / Growth Habit','Growth Habit','Spread'),
-    soil: g('Soil Type / Preferences','Soil Type','Soil'),
-    propagation: g('Propagation'),
-    sun:  g('Sunlight','Sun','Light'),
-    bloom: g('Bloom Period','Bloom'),
-    zones: g('USDA Zones','Zones'),
-    desc: g('Description / Ecological Role','Description','Notes'),
-    img:  g('Plant Image','Image','Photo')
+
+
+
+
+// ── Save ──
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTHsmTjn0HVI-nG6wMdkB0CXnXwjsCtnYM6rPxg_cwcHuhw0RUQk83Dhgnk4ElemrGrQ/exec';
+
+async function savePlant() {
+  const common = document.getElementById('f-common').value.trim();
+  const sci = document.getElementById('f-sci').value.trim();
+  if (!common) { showToast('Please enter a common name'); return; }
+
+  const dupe = findDuplicate(sci);
+  if (dupe) {
+    const dupeName = dupe.common_name || dupe.common || '';
+    const dupeId = dupe.plant_id || dupe.id || '';
+    if (!confirm(sci + ' already exists as "' + dupeName + '" (' + dupeId + '). Save as a separate entry anyway?')) return;
+  }
+
+  const p = {
+    plant_id:             document.getElementById('f-id').value,
+    common_name:          common,
+    scientific_name:      sci,
+    size_tall:            document.getElementById('f-tall').value,
+    size_wide:            document.getElementById('f-wide').value,
+    root_system:          document.getElementById('f-root').value,
+    spread_growth_habit:  document.getElementById('f-spread').value,
+    soil_type:            document.getElementById('f-soil').value,
+    propagation:          document.getElementById('f-prop').value,
+    sunlight:             document.getElementById('f-sun').value,
+    bloom_period:         document.getElementById('f-bloom').value,
+    usda_zones:           document.getElementById('f-zones').value,
+    description:          document.getElementById('f-desc').value,
+    plant_image:          '',
+    seedling_image:       '',
+    native_to:            document.getElementById('f-native').value,
   };
-}
 
-function setDS(type,html){ const el=document.getElementById('data-status'); el.className='data-status status-'+type; el.innerHTML=html; }
-function showErr(msg){ const el=document.getElementById('error-banner'); el.style.display='block'; el.innerHTML=msg; }
-function clearErr(){ document.getElementById('error-banner').style.display='none'; }
+  // Save locally first so it's never lost
+  const local = { ...p, id: p.plant_id, common: p.common_name, sci: p.scientific_name,
+    tall: p.size_tall, wide: p.size_wide, root: p.root_system, spread: p.spread_growth_habit,
+    soil: p.soil_type, prop: p.propagation, sun: p.sunlight, bloom: p.bloom_period,
+    zones: p.usda_zones, native: p.native_to, desc: p.description,
+    imgPlant: '', imgSeedling: '' };
+  savedPlants.push(local);
+  nextId++;
+  updateBadge();
 
-async function loadPlants(){
-  clearErr();
-  setDS('loading','<span class="spinner"></span> Loading…');
-  document.getElementById('plant-list').innerHTML='<div style="padding:14px;font-size:12px;color:#aaa;">Connecting…</div>';
+  // Show sending state
+  showToast('⏳ Sending to Google Sheets…');
+  resetForm();
+  switchTab('library');
+
+  // Send directly to Google Sheets via Apps Script
   try {
-    const data = await jsonp(API);
-    if(data && data.error) throw new Error(data.error);
-    if(!Array.isArray(data)) throw new Error('Expected array, got: ' + typeof data);
-    if(!data.length) throw new Error('0 rows — check PLANT_SHEET name in Apps Script');
-    PLANTS = data.map(norm).filter(p=>p.id&&p.name);
-    setDS('ok','✓ '+PLANTS.length+' plants');
-    renderPlantList();
-    updatePlacedList();
-  } catch(e){
-    setDS('err','⚠ Error');
-    showErr('<strong>Plant load failed.</strong><br><code>'+e.message+'</code>');
-    PLANTS=[]; renderPlantList();
-  }
-}
-
-/* ── TOOLS ── */
-const hints={
-  place:'Drag a plant onto the bed · Click to select · Delete key to remove · Use tools above to change bed shape',
-  rect:'Click and drag to draw a rectangle bed · Shape locks automatically when done',
-  poly:'👆 Click canvas to place corner points · Click FIRST point or double-click to FINISH · Esc to cancel',
-  edit:'Drag a corner handle to reshape · Double-click an edge to add a corner · Right-click a corner to remove it to remove it'
-};
-function setTool(t){
-  activeTool=t; polyPoints=[]; isDrawingPoly=false; isDrawingRect=false; rectStart=null;
-  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
-  const btn=document.getElementById('tool-'+t);
-  if(btn) btn.classList.add('active');
-  const hintEl=document.getElementById('tool-hint');
-  hintEl.textContent=hints[t];
-  // Highlight hint bar when drawing tools active
-  const isDrawing=(t==='poly'||t==='rect');
-  hintEl.style.color=isDrawing?'#2d5a1b':'#666';
-  hintEl.style.fontWeight=isDrawing?'700':'500';
-  hintEl.style.background=isDrawing?'#eaf3de':'transparent';
-  hintEl.style.padding=isDrawing?'4px 10px':'0';
-  hintEl.style.borderRadius=isDrawing?'6px':'0';
-  canvas.style.cursor=(t==='edit'||t==='place')?'default':'crosshair';
-  renderCanvas();
-}
-
-function syncInputs(){
-  const g=garden(); if(!g) return;
-  document.getElementById('bed-name-input').value=g.name;
-  document.getElementById('bed-w').value=g.w;
-  document.getElementById('bed-d').value=g.d;
-}
-
-function renderGardenList(){
-  const el=document.getElementById('garden-list'); el.innerHTML='';
-  gardens.forEach((g,i)=>{
-    if(!isValidGarden(g)) return;
-    const row=document.createElement('div');
-    row.className='garden-row'+(i===currentGarden?' active':'');
-    const cnt=(g.placed||[]).length;
-    row.innerHTML=`<div class="garden-dot"></div>
-      <div class="garden-row-name" title="${g.name}">${g.name}${g.shape==='poly'?' ⬡':''}</div>
-      <div class="garden-row-meta">${g.w}×${g.d}ft${cnt?' · '+cnt+'p':''}</div>
-      <button class="garden-del" onclick="deleteGarden(event,${i})">×</button>`;
-    row.addEventListener('click',()=>switchGarden(i));
-    el.appendChild(row);
-  });
-}
-
-function switchGarden(i){
-  if(!appReady) return;
-  currentGarden=i; selectedIdx=null; polyPoints=[]; isDrawingPoly=false;
-  syncInputs(); renderGardenList(); renderCanvas(); updatePlacedList();
-}
-
-function addGarden(){
-  if(!appReady) return;
-  const n=prompt('Name for this garden bed:','Garden '+(gardens.length+1)); if(!n) return;
-  const w=parseInt(prompt('Width in feet:','20'))||20;
-  const d=parseInt(prompt('Depth in feet:','12'))||12;
-  gardens.push(defaultGarden(n,w,d));
-  switchGarden(gardens.length-1); scheduleSave();
-}
-
-function deleteGarden(e,i){
-  e.stopPropagation();
-  if(gardens.filter(isValidGarden).length<=1){alert("Need at least one bed.");return;}
-  if(!confirm('Delete "'+gardens[i].name+'" and all its plants?')) return;
-  gardens.splice(i,1);
-  if(currentGarden>=gardens.length) currentGarden=Math.max(0,gardens.length-1);
-  switchGarden(currentGarden); scheduleSave();
-}
-
-function applyBedSettings(){
-  if(!appReady) return;
-  const g=garden(); if(!g) return;
-  g.name=document.getElementById('bed-name-input').value||g.name;
-  g.w=parseInt(document.getElementById('bed-w').value)||g.w;
-  g.d=parseInt(document.getElementById('bed-d').value)||g.d;
-  if(g.shape==='rect') g.polygon=null;
-  renderGardenList(); renderCanvas(); scheduleSave();
-}
-
-function pointInPoly(ptx,pty,poly){
-  let inside=false;
-  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
-    if(((yi>pty)!==(yj>pty))&&(ptx<(xj-xi)*(pty-yi)/(yj-yi)+xi)) inside=!inside;
-  }
-  return inside;
-}
-// Polygons stored in FEET. Convert to pixels only for drawing/hit-testing.
-function rectPolyFt(g){return [{x:0,y:0},{x:g.w,y:0},{x:g.w,y:g.d},{x:0,y:g.d}];}
-function activePolyFt(){const g=garden();return(g&&g.shape==='poly'&&g.polygon)?g.polygon:rectPolyFt(g);}
-function polyToPx(poly){return poly.map(p=>({x:px(p.x),y:px(p.y)}));}
-function rectPoly(g){return polyToPx(rectPolyFt(g));}
-function activePoly(){return polyToPx(activePolyFt());}
-
-function renderCanvas(){
-  if(!appReady||!garden()||!isValidGarden(garden())) return;
-  const g=garden();
-  const W=Math.round(px(g.w)), H=Math.round(px(g.d));
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  canvas.width=W*PR; canvas.height=H*PR;
-  ctx.setTransform(PR,0,0,PR,0,0);
-  ctx.clearRect(0,0,W,H);
-  const poly=activePoly();
-  ctx.fillStyle='#f5f4f0'; ctx.fillRect(0,0,W,H);
-  ctx.save();
-  ctx.beginPath(); poly.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.clip();
-  ctx.fillStyle='#e8f5e0'; ctx.fillRect(0,0,W,H);
-  const c=cell(); ctx.strokeStyle='#c0d8a8'; ctx.lineWidth=0.5;
-  for(let x=0;x<=W;x+=c){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<=H;y+=c){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-  ctx.restore();
-  ctx.beginPath(); poly.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath();
-  ctx.strokeStyle='#2d5a1b'; ctx.lineWidth=2.5; ctx.stroke();
-  const fs=Math.max(8,Math.min(11,c*0.75));
-  ctx.fillStyle='#5a9a40'; ctx.font=`${fs}px sans-serif`;
-  const step=zoom<0.5?5:zoom<0.8?2:1;
-  for(let x=0;x<=g.w;x+=step){if(px(x)+12<W||x===0)ctx.fillText(x+"'",px(x)+2,fs+1);}
-  for(let y=0;y<=g.d;y+=step){if(px(y)+fs<H||y===0)ctx.fillText(y+"'",2,px(y)+fs+1);}
-  if(activeTool==='rect'&&isDrawingRect&&rectStart){
-    const mx=mousePos.x,my=mousePos.y;
-    ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
-    ctx.strokeRect(Math.min(rectStart.x,mx),Math.min(rectStart.y,my),Math.abs(mx-rectStart.x),Math.abs(my-rectStart.y));
-    ctx.setLineDash([]);
-  }
-  if(activeTool==='poly'){
-    // Show prominent banner at BOTTOM so ruler stays visible
-    ctx.fillStyle='rgba(45,90,27,0.88)';
-    ctx.fillRect(0,canvas.height-28,canvas.width,28);
-    ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
-    ctx.fillText('DRAWING SHAPE — Click to add corners · Click first point or double-click to FINISH · Esc to cancel',canvas.width/2,canvas.height-10);
-    if(!isDrawingPoly||!polyPoints.length){return;}
-    ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.setLineDash([5,4]);
-    ctx.beginPath(); polyPoints.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.lineTo(mousePos.x,mousePos.y); ctx.stroke(); ctx.setLineDash([]);
-    polyPoints.forEach((p,i)=>{
-      ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);
-      ctx.fillStyle=i===0?'#2d5a1b':'#fff';ctx.fill();
-      ctx.strokeStyle='#2d5a1b';ctx.lineWidth=1.5;ctx.stroke();
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(p),
+      mode: 'no-cors'
     });
-    if(polyPoints.length>2){ctx.beginPath();ctx.arc(polyPoints[0].x,polyPoints[0].y,9,0,Math.PI*2);ctx.strokeStyle='rgba(45,90,27,0.4)';ctx.lineWidth=2;ctx.stroke();}
+    showToast('✓ ' + common + ' saved locally and sent to Google Sheets');
+  } catch (e) {
+    showToast('⚠ Saved locally but could not reach Google Sheets — check your connection');
+    console.error('Fetch error:', e);
   }
-  if(activeTool==='edit'){
-    const verts=(g.shape==='poly'&&g.polygon)?g.polygon:rectPoly(g);
-    verts.forEach((p,i)=>{
-      ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);
-      ctx.fillStyle=i===editingVertexIdx?'#cc9900':'#fff';ctx.fill();
-      ctx.strokeStyle='#2d5a1b';ctx.lineWidth=2;ctx.stroke();
-    });
-    // Show hint text for adding points
-    if(g.shape==='poly'&&g.polygon){
-      ctx.fillStyle='rgba(45,90,27,0.6)';ctx.font='11px sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText('Double-click an edge to add a point · Right-click a point to remove it',canvas.width/2,14);
-    }
-  }
-  (g.placed||[]).forEach((item,idx)=>{
-    // Draw spacers
-    if(item.type==='spacer'){
-      const cx=px(item.x), cy=px(item.y);
-      const sw=px(item.w||4), sh=px(item.h||4);
-      const sel=idx===selectedIdx;
-      const rot=(item.rotation||0)*Math.PI/180;
-      ctx.save();
-      ctx.translate(cx,cy);
-      ctx.rotate(rot);
-      ctx.fillStyle=item.color||'#999';
-      ctx.globalAlpha=0.35;
-      ctx.fillRect(-sw/2,-sh/2,sw,sh);
-      ctx.globalAlpha=1;
-      ctx.strokeStyle=sel?'#cc9900':(item.color||'#999');
-      ctx.lineWidth=sel?2.5:1.5;
-      if(sel) ctx.setLineDash([4,3]);
-      ctx.strokeRect(-sw/2,-sh/2,sw,sh);
-      ctx.setLineDash([]);
-      const lfs=Math.max(8,Math.min(13,sw*0.22));
-      ctx.fillStyle='#333';ctx.font=`600 ${lfs}px sans-serif`;
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(item.label||'',0,0);
-      if(item.locked){ctx.font=`${lfs}px sans-serif`;ctx.fillText('🔒',0,-sh/2-8);}
-      // Draw rotation handle when selected
-      if(sel){
-        ctx.strokeStyle='#cc9900';ctx.lineWidth=1.5;
-        ctx.beginPath();ctx.moveTo(0,-sh/2);ctx.lineTo(0,-sh/2-16);ctx.stroke();
-        ctx.beginPath();ctx.arc(0,-sh/2-20,5,0,Math.PI*2);
-        ctx.fillStyle='#cc9900';ctx.fill();
-        // Show rotation label
-        ctx.fillStyle='#cc9900';ctx.font='10px sans-serif';
-        ctx.fillText((item.rotation||0)+'°',sw/2+4,-sh/2);
-      }
-      ctx.restore();
-      return;
-    }
-    const p=PLANTS.find(x=>x.id===item.pid); if(!p) return;
-    const cx=px(item.x),cy=px(item.y),r=Math.max(6,inToPx(p.wide/2)),sr=r*1.35,sel=idx===selectedIdx;
-    ctx.beginPath();ctx.arc(cx,cy,sr,0,Math.PI*2);ctx.fillStyle='rgba(45,90,27,0.07)';ctx.fill();
-    ctx.strokeStyle='#7ab55a';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
-    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
-    ctx.fillStyle=sel?'#fff8c0':'#c8e6b0';ctx.fill();
-    ctx.strokeStyle=sel?'#cc9900':'#2d5a1b';ctx.lineWidth=sel?2.5:1.5;ctx.stroke();
-    if(sel){ctx.beginPath();ctx.arc(cx,cy,r+5,0,Math.PI*2);ctx.strokeStyle='rgba(204,153,0,0.3)';ctx.lineWidth=2;ctx.stroke();}
-    if(item.locked){const lsz=Math.max(9,r*0.55);ctx.font=`${lsz}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('🔒',cx-lsz/2,cy-r-2);}
-    const lfs=Math.max(8,Math.min(11,r*0.55));
-    ctx.fillStyle='#1a4a0a';ctx.font=`500 ${lfs}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
-    const words=p.name.split(' ');
-    if(r>20&&words.length>1){ctx.fillText(words[0],cx,cy-lfs*0.6);ctx.fillText(words.slice(1).join(' '),cx,cy+lfs*0.6);}
-    else ctx.fillText(words[0],cx,cy);
-  });
-  ctx.textAlign='left';ctx.textBaseline='alphabetic';
-  const placed=(g.placed||[]);
-  const cnt=placed.filter(p=>p.type!=='spacer').length;
-  const spacerCnt=placed.filter(p=>p.type==='spacer').length;
-  document.getElementById('plant-count').textContent=cnt+' plant'+(cnt!==1?'s':'')+' placed'+(spacerCnt?' · '+spacerCnt+' spacer'+(spacerCnt!==1?'s':''):'');
-  renderGardenList();
 }
 
-function coords(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*(canvas.width/PR/r.width),y:(e.clientY-r.top)*(canvas.height/PR/r.height)};}
-
-canvas.addEventListener('contextmenu', e=>{
-  e.preventDefault();
-  if(activeTool!=='edit') return;
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left, y=e.clientY-rect.top;
-  const g=garden();
-  if(!g||g.shape!=='poly'||!g.polygon||g.polygon.length<=3) return;
-  // Find vertex within click range
-  // Hit test in px coords, remove from ft array
-  const polyPx=polyToPx(g.polygon);
-  const hit=polyPx.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=10);
-  if(hit>=0){
-    g.polygon.splice(hit,1);
-    editingVertexIdx=null;
-    renderCanvas();
-    scheduleSave();
-  }
-});
-
-canvas.addEventListener('mousemove',e=>{
-  if(!appReady) return;
-  const{x,y}=coords(e); mousePos={x,y};
-  if(isDraggingVertex&&editingVertexIdx!==null){
-    const g=garden();
-    const vertsFt=(g.shape==='poly'&&g.polygon)?g.polygon:rectPolyFt(g);
-    vertsFt[editingVertexIdx]={x:x/cell(),y:y/cell()};
-    if(g.shape==='rect'){g.shape='poly';g.polygon=vertsFt;}
-    renderCanvas();return;
-  }
-  if(isRotatingSpacер&&rotatingSpacerIdx!==null){
-    const delta=x-rotateStartX;
-    garden().placed[rotatingSpacerIdx].rotation=Math.round(rotateStartAngle+delta*0.5);
-    renderCanvas();return;
-  }
-  if(isDraggingPlaced&&draggingPlacedIdx!==null){
-    const c=cell();
-    garden().placed[draggingPlacedIdx].x=(x-dragOffset.x)/c;
-    garden().placed[draggingPlacedIdx].y=(y-dragOffset.y)/c;
-    renderCanvas();return;
-  }
-  if((activeTool==='poly'&&isDrawingPoly)||(activeTool==='rect'&&isDrawingRect)){renderCanvas();return;}
-  if(activeTool==='edit'){
-    const vertsHit=activePoly();
-    canvas.style.cursor=vertsHit.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8)>=0?'grab':'default';
-  }
-  const tip=document.getElementById('tooltip');
-  for(let i=(garden().placed||[]).length-1;i>=0;i--){
-    const item=garden().placed[i],p=PLANTS.find(x=>x.id===item.pid);if(!p)continue;
-    // Hit test for spacers
-    if(item.type==='spacer'){
-      const rot=(item.rotation||0)*Math.PI/180;
-      const cx2=px(item.x), cy2=px(item.y);
-      const sw=px(item.w||4)/2, sh=px(item.h||4)/2;
-      // Check rotation handle (circle above spacer)
-      const handleX=cx2+Math.sin(-rot+Math.PI)*(sh+20)*Math.cos(Math.PI);
-      // Simpler: handle is at top of unrotated box transformed
-      const hx=cx2+(-sh-20)*Math.sin(rot), hy=cy2+(-sh-20)*Math.cos(rot);
-      if(Math.hypot(x-hx,y-hy)<=8&&!item.locked){
-        isRotatingSpacер=true; rotatingSpacerIdx=i; selectedIdx=i;
-        rotateStartX=x; rotateStartAngle=item.rotation||0;
-        canvas.style.cursor='grab'; renderCanvas(); return;
-      }
-      // Check body hit
-      if(Math.abs(x-cx2)<=sw+4&&Math.abs(y-cy2)<=sh+4){
-        const c2=cell(); selectedIdx=i;
-        if(!item.locked){isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c2,y:y-item.y*c2};}
-        renderCanvas();updatePlacedList();return;
-      }
-      continue;
-    }
-    if(Math.hypot(x-px(item.x),y-px(item.y))<=Math.max(6,inToPx(p.wide/2))+6){
-      tip.style.display='block';tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-10)+'px';
-      tip.textContent=p.name+(p.bloom?' · '+p.bloom:'')+(p.sun?' · '+p.sun:'');return;
-    }
-  }
-  tip.style.display='none';
-});
-
-canvas.addEventListener('mousedown',e=>{
-  if(!appReady) return;
-  const{x,y}=coords(e);
-  if(activeTool==='edit'){
-    const vertsHit=activePoly();
-    // Check if clicking an existing vertex
-    const hit=vertsHit.findIndex(p=>Math.hypot(x-p.x,y-p.y)<=8);
-    if(hit>=0){editingVertexIdx=hit;isDraggingVertex=true;canvas.style.cursor='grabbing';return;}
-  }
-  if(activeTool==='rect'){isDrawingRect=true;rectStart={x,y};return;}
-  if(activeTool==='poly') return;
-  const placed=garden().placed||[];
-  for(let i=placed.length-1;i>=0;i--){
-    const item=placed[i];
-    const p=item.type==='spacer'?null:PLANTS.find(x=>x.id===item.pid);
-    if(!p&&item.type!=='spacer') continue;
-    // Hit test for spacers
-    if(item.type==='spacer'){
-      const rot=(item.rotation||0)*Math.PI/180;
-      const cx2=px(item.x), cy2=px(item.y);
-      const sw=px(item.w||4)/2, sh=px(item.h||4)/2;
-      // Check rotation handle (circle above spacer)
-      const handleX=cx2+Math.sin(-rot+Math.PI)*(sh+20)*Math.cos(Math.PI);
-      // Simpler: handle is at top of unrotated box transformed
-      const hx=cx2+(-sh-20)*Math.sin(rot), hy=cy2+(-sh-20)*Math.cos(rot);
-      if(Math.hypot(x-hx,y-hy)<=8&&!item.locked){
-        isRotatingSpacер=true; rotatingSpacerIdx=i; selectedIdx=i;
-        rotateStartX=x; rotateStartAngle=item.rotation||0;
-        canvas.style.cursor='grab'; renderCanvas(); return;
-      }
-      // Check body hit
-      if(Math.abs(x-cx2)<=sw+4&&Math.abs(y-cy2)<=sh+4){
-        const c2=cell(); selectedIdx=i;
-        if(!item.locked){isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c2,y:y-item.y*c2};}
-        renderCanvas();updatePlacedList();return;
-      }
-      continue;
-    }
-    if(Math.hypot(x-px(item.x),y-px(item.y))<=Math.max(6,inToPx(p.wide/2))+6){
-      const c=cell(); selectedIdx=i; if(item.locked){showPlantInfo(item.pid);renderCanvas();return;} isDraggingPlaced=true;draggingPlacedIdx=i;dragOffset={x:x-item.x*c,y:y-item.y*c};
-      showPlantInfo(item.pid);renderCanvas();return;
-    }
-  }
-  selectedIdx=null;isDraggingPlaced=false;draggingPlacedIdx=null;
-  if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}renderCanvas();
-});
-
-canvas.addEventListener('mouseup',e=>{
-  if(!appReady) return;
-  const{x,y}=coords(e);
-  if(isDraggingVertex){isDraggingVertex=false;editingVertexIdx=null;canvas.style.cursor='default';scheduleSave();return;}
-  if(isDraggingPlaced){isDraggingPlaced=false;draggingPlacedIdx=null;
-  if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}scheduleSave();return;}
-  if(activeTool==='rect'&&isDrawingRect&&rectStart){
-    isDrawingRect=false;
-    const rw=Math.abs(x-rectStart.x),rh=Math.abs(y-rectStart.y);
-    if(rw>10&&rh>10){
-      const g=garden();g.shape='poly';
-      const c=cell();
-      g.polygon=[{x:Math.min(rectStart.x,x)/c,y:Math.min(rectStart.y,y)/c},{x:Math.max(rectStart.x,x)/c,y:Math.min(rectStart.y,y)/c},{x:Math.max(rectStart.x,x)/c,y:Math.max(rectStart.y,y)/c},{x:Math.min(rectStart.x,x)/c,y:Math.max(rectStart.y,y)/c}];
-      setTool('place');
-      renderCanvas();scheduleSave();
-    }
-    rectStart=null;
-  }
-});
-
-canvas.addEventListener('click',e=>{
-  if(!appReady||activeTool!=='poly') return;
-  const{x,y}=coords(e);
-  if(!isDrawingPoly){
-    isDrawingPoly=true;polyPoints=[];
-    // Show finish button
-    const fb=document.getElementById('finish-shape-btn');
-    if(fb) fb.style.display='inline-block';
-  }
-  if(polyPoints.length>=3&&Math.hypot(x-polyPoints[0].x,y-polyPoints[0].y)<12){finishPoly();return;}
-  polyPoints.push({x,y});renderCanvas();
-});
-
-canvas.addEventListener('dblclick',e=>{
-  if(activeTool==='poly'&&isDrawingPoly&&polyPoints.length>=3){finishPoly();return;}
-  // Double-click on edge in edit mode = add new point (coords in FEET)
-  if(activeTool==='edit'){
-    const rect=canvas.getBoundingClientRect();
-    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-    const g=garden();
-    if(!g||g.shape!=='poly'||!g.polygon) return;
-    const vertsFt=g.polygon; // stored in feet
-    const vertsPx=polyToPx(vertsFt); // px for hit testing
-    for(let i=0;i<vertsPx.length;i++){
-      const a=vertsPx[i], b=vertsPx[(i+1)%vertsPx.length];
-      const dx=b.x-a.x, dy=b.y-a.y;
-      const len2=dx*dx+dy*dy;
-      if(len2===0) continue;
-      const t=Math.max(0,Math.min(1,((mx-a.x)*dx+(my-a.y)*dy)/len2));
-      const nx=a.x+t*dx, ny=a.y+t*dy;
-      if(Math.hypot(mx-nx,my-ny)<=10){
-        // Insert in FEET coords
-        vertsFt.splice(i+1,0,{x:nx/cell(),y:ny/cell()});
-        editingVertexIdx=i+1;
-        renderCanvas();
-        return;
-      }
-    }
-  }
-});
-
-function finishPoly(){
-  if(polyPoints.length<3){polyPoints=[];isDrawingPoly=false;renderCanvas();return;}
-  const g=garden();g.shape='poly';
-  const c=cell();
-  g.polygon=polyPoints.map(p=>({x:p.x/c,y:p.y/c}));
-  polyPoints=[];isDrawingPoly=false;
-  // Hide finish button and auto-switch to place tool
-  const fb=document.getElementById('finish-shape-btn');
-  if(fb) fb.style.display='none';
-  setTool('place');
-  renderCanvas();scheduleSave();
+function updateBadge() {
+  const b = document.getElementById('lib-count-badge');
+  b.textContent = savedPlants.length > 0 ? '(' + savedPlants.length + ')' : '';
 }
 
-canvas.addEventListener('dragover',e=>e.preventDefault());
-canvas.addEventListener('drop',e=>{
-  if(!appReady||activeTool!=='place') return;
-  e.preventDefault();
-  const{x,y}=coords(e);
-  if(!pointInPoly(x,y,activePoly())) return;
-  if(!garden().placed) garden().placed=[];
-  const c=cell(); garden().placed.push({pid:dragPlantId,x:x/c,y:y/c});
-  selectedIdx=garden().placed.length-1;
-  showPlantInfo(dragPlantId);renderCanvas();updatePlacedList();scheduleSave();
-});
-
-canvas.addEventListener('mouseleave',()=>{isDraggingPlaced=false;draggingPlacedIdx=null;
-  if(isRotatingSpacер){isRotatingSpacер=false;rotatingSpacerIdx=null;scheduleSave();}document.getElementById('tooltip').style.display='none';});
-
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){polyPoints=[];isDrawingPoly=false;isDrawingRect=false;rectStart=null;const fb=document.getElementById('finish-shape-btn');if(fb)fb.style.display='none';setTool('place');renderCanvas();return;}
-  if((e.key==='Delete'||e.key==='Backspace')&&selectedIdx!==null&&appReady){
-    const a=document.activeElement;
-    if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')) return;
-    const selItem=garden().placed[selectedIdx];
-    if(selItem&&selItem.locked) return;
-    garden().placed.splice(selectedIdx,1);selectedIdx=null;renderCanvas();updatePlacedList();scheduleSave();
+// ── Library ──
+function renderLibrary() {
+  const empty = document.getElementById('library-empty');
+  const content = document.getElementById('library-content');
+  const cards = document.getElementById('plant-cards');
+  const countText = document.getElementById('lib-count-text');
+  if (savedPlants.length === 0) {
+    empty.style.display = 'block';
+    content.style.display = 'none';
+    return;
   }
-});
-
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  zoom=Math.max(0.25,Math.min(4,zoom+(e.deltaY>0?-0.1:0.1)));
-  document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
-  renderCanvas();
-},{passive:false});
-
-function changeZoom(d){zoom=Math.max(0.25,Math.min(4,zoom+d));document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';renderCanvas();}
-function fitZoom(){
-  const ca=document.getElementById('canvas-area'),g=garden();if(!g)return;
-  zoom=Math.max(0.25,Math.min(4,Math.min((ca.clientWidth-48)/(g.w*BASE_CELL),(ca.clientHeight-60)/(g.d*BASE_CELL))));
-  document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';renderCanvas();
-}
-
-function sunTC(s){
-  if(!s) return 'tag-part';const l=s.toLowerCase();
-  if(l.includes('full sun')&&!l.includes('part')) return 'tag-sun';
-  if(l.includes('shade')&&!l.includes('part')&&!l.includes('sun')) return 'tag-shade';
-  return 'tag-part';
-}
-
-function renderPlantList(){
-  const q=document.getElementById('search').value.toLowerCase();
-  const list=document.getElementById('plant-list');
-  if(!PLANTS.length){list.innerHTML='<div style="padding:14px;font-size:12px;color:#aaa;">No plants loaded.</div>';return;}
-  const filtered=PLANTS.filter(p=>{
-    const s=p.sun.toLowerCase();
-    const ms=sunFilter==='all'||(sunFilter==='full sun'&&s.includes('full sun')&&!s.includes('part'))||(sunFilter==='part'&&s.includes('part'))||(sunFilter==='shade'&&s.includes('shade')&&!s.includes('part')&&!s.includes('sun'));
-    return ms&&(!q||p.name.toLowerCase().includes(q)||p.sci.toLowerCase().includes(q));
-  });
-  list.innerHTML='';
-  if(!filtered.length){list.innerHTML='<div style="padding:12px;font-size:12px;color:#aaa;">No plants match.</div>';return;}
-  const fmt=i=>i>=12?(i/12).toFixed(1).replace('.0','')+"'":i+'"';
-  filtered.sort((a,b)=>a.name.localeCompare(b.name));
-  filtered.forEach(p=>{
-    const d=document.createElement('div');d.className='plant-card';d.draggable=true;
-    d.innerHTML=`${p.img?`<img class="pc-img" src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:'' }
-      <div class="pc-name">${p.name}</div><div class="pc-sci">${p.sci}</div>
-      <div class="pc-tags"><span class="pc-tag ${sunTC(p.sun)}">${p.sun}</span>
-        <span class="pc-tag tag-size">${fmt(p.tall)} H × ${fmt(p.wide)} W</span>
-        ${p.bloom?`<span class="pc-tag tag-bloom">${p.bloom}</span>`:''}</div>`;
-    d.addEventListener('dragstart',e=>{dragPlantId=p.id;d.classList.add('dragging');e.dataTransfer.setData('text/plain',p.id);});
-    d.addEventListener('dragend',()=>d.classList.remove('dragging'));
-    d.addEventListener('mouseenter',()=>showPlantInfo(p.id));
-    list.appendChild(d);
-  });
-}
-
-function setFilter(f,btn){
-  sunFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderPlantList();
-}
-
-function getPlantCounts(g) {
-  const items = (g && g.placed) || [];
-  const counts = {};
-  const spacers = [];
-  items.forEach((item, i) => {
-    if (item.type === 'spacer') {
-      spacers.push({ label: item.label || 'Spacer', idx: i, locked: !!item.locked });
-    } else {
-      const p = PLANTS.find(x => x.id === item.pid);
-      const name = p ? p.name : null;
-      const key = name || ('unknown:' + item.pid);
-      if (!counts[key]) counts[key] = { name: name || item.pid, count: 0, unknown: !name };
-      counts[key].count++;
-    }
-  });
-  const sorted = Object.values(counts).sort((a, b) => a.name.localeCompare(b.name));
-  return { plants: sorted, spacers };
-}
-
-function updatePlacedList(){
-  const g = garden();
-  const el = document.getElementById('placed-summary');
-  const items = (g && g.placed) || [];
-  if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:#aaa;font-style:italic;">No plants yet.</div>'; return; }
-  const { plants, spacers } = getPlantCounts(g);
-  let html = '';
-  plants.forEach(({ name, count, unknown }) => {
-    const displayName = unknown ? '⚠ Unknown plant' : name;
-    const nameColor = unknown ? '#cc6600' : '#333';
-    html += `<div class="placed-item">
-      <span class="placed-badge">${count}</span>
-      <span class="placed-name" style="color:${nameColor}">${displayName}</span>
-    </div>`;
-  });
-  if (spacers.length) {
-    html += `<div style="font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;margin:8px 0 4px;font-weight:600;">Spacers</div>`;
-    spacers.forEach(({ label, idx, locked }) => {
-      html += `<div class="placed-item">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#888;">${label}</span>
-        <button class="placed-lock${locked?' locked':''}" onclick="toggleLock(${idx})" title="${locked?'Unlock':'Lock'}">${locked?'🔒':'🔓'}</button>
-      </div>`;
-    });
-  }
-  el.innerHTML = html;
-  // Show clean-up button if any unknowns exist
-  const hasUnknown = plants.some(p => p.unknown);
-  const cleanBtn = document.getElementById('clean-unknowns-btn');
-  if (cleanBtn) cleanBtn.style.display = hasUnknown ? 'inline-block' : 'none';
-}
-
-function removeUnknownPlants(){
-  console.log('removeUnknownPlants called');
-  const g = garden();
-  if (!g) { console.log('no garden'); return; }
-  console.log('placed before:', g.placed.length);
-  console.log('PLANTS loaded:', PLANTS.length);
-  g.placed.forEach((item,i) => {
-    if (item.type === 'spacer') return;
-    const found = PLANTS.find(x => x.id === item.pid);
-    if (!found) console.log('Unknown pid:', item.pid);
-  });
-  const before = g.placed.length;
-  g.placed = g.placed.filter(item => {
-    if (item.type === 'spacer') return true;
-    return !!PLANTS.find(x => x.id === item.pid);
-  });
-  const removed = before - g.placed.length;
-  console.log('removed:', removed, 'placed after:', g.placed.length);
-  renderCanvas();
-  updatePlacedList();
-  scheduleSave();
-  if (removed > 0) showToast('Removed ' + removed + ' unknown plant' + (removed !== 1 ? 's' : '') + ' from bed');
-  else showToast('No unknown plants found — try reloading plants first');
-}
-
-function showToast(msg){
-  let t = document.getElementById('toast-msg');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast-msg';
-    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2e1a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.style.opacity = '1';
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.style.opacity = '0', 2500);
-}
-
-function toggleLock(i){
-  const g=garden(); if(!g||!g.placed[i]) return;
-  g.placed[i].locked=!g.placed[i].locked;
-  updatePlacedList(); renderCanvas(); scheduleSave();
-}
-
-// ── SPACERS ──
-const SPACER_TYPES = [
-  {label:'Septic',   color:'#8B4513', w:10, h:10},
-  {label:'Woodpile', color:'#8B6914', w:4,  h:4},
-  {label:'Shed',     color:'#666',    w:8,  h:8},
-  {label:'Path',     color:'#b8a88a', w:3,  h:10},
-  {label:'Rock',     color:'#888',    w:3,  h:3},
-  {label:'Other',    color:'#aaa',    w:4,  h:4},
-];
-
-function addSpacer(){
-  if(!appReady||!garden()) return;
-  // Build a simple picker dialog
-  const existing = document.getElementById('spacer-picker');
-  if(existing){ existing.remove(); return; }
-  const picker = document.createElement('div');
-  picker.id = 'spacer-picker';
-  picker.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #d0cfc8;border-radius:12px;padding:20px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,0.15);min-width:260px;';
-  picker.innerHTML = `<div style="font-weight:600;margin-bottom:12px;color:#2d5a1b;">Add Spacer Object</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      ${SPACER_TYPES.map((t,i)=>`<button onclick="placeSpacer(${i})" style="padding:8px;border:1px solid #d0cfc8;border-radius:8px;cursor:pointer;background:#fafaf8;font-size:12px;">
-        <span style="display:inline-block;width:14px;height:14px;background:${t.color};border-radius:3px;vertical-align:middle;margin-right:5px;"></span>${t.label}
-      </button>`).join('')}
+  empty.style.display = 'none';
+  content.style.display = 'block';
+  countText.textContent = savedPlants.length + ' plant' + (savedPlants.length !== 1 ? 's' : '') + ' in library';
+  cards.innerHTML = savedPlants.map((p, i) => `
+    <div class="plant-card">
+      <div class="plant-card-header" id="hdr-${i}" onclick="toggleCard(${i})">
+        <div>
+          <h3>${p.common} <span class="chip chip-id">${p.id}</span></h3>
+          <div class="sci">${p.sci}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="chip chip-saved">Saved</span>
+          <i class="chevron" id="chev-${i}">▾</i>
+        </div>
+      </div>
+      <div class="plant-card-body" id="body-${i}">
+        <div class="mini-grid">
+          <div class="mini-field"><div class="mini-label">Height</div><div class="mini-value">${p.tall}</div></div>
+          <div class="mini-field"><div class="mini-label">Width</div><div class="mini-value">${p.wide}</div></div>
+          <div class="mini-field"><div class="mini-label">Sunlight</div><div class="mini-value">${p.sun}</div></div>
+          <div class="mini-field"><div class="mini-label">Bloom period</div><div class="mini-value">${p.bloom}</div></div>
+          <div class="mini-field"><div class="mini-label">USDA Zones</div><div class="mini-value">${p.zones}</div></div>
+          <div class="mini-field"><div class="mini-label">Soil</div><div class="mini-value">${p.soil}</div></div>
+          <div class="mini-field"><div class="mini-label">Root system</div><div class="mini-value">${p.root}</div></div>
+          <div class="mini-field"><div class="mini-label">Growth habit</div><div class="mini-value">${p.spread}</div></div>
+          <div class="mini-field"><div class="mini-label">Propagation</div><div class="mini-value">${p.prop}</div></div>
+          <div class="mini-field"><div class="mini-label">Native to</div><div class="mini-value">${p.native}</div></div>
+          <div class="mini-field mini-full"><div class="mini-label">Description</div><div class="mini-value">${p.desc}</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">
+          📱 Add photos via AppSheet app
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px">
+          <button class="btn btn-sm btn-danger" onclick="deletePlant(${i})">✕ Remove</button>
+        </div>
+      </div>
     </div>
-    <div style="font-size:11px;color:#888;margin-bottom:8px;">Or type a custom name:</div>
-    <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <input id="spacer-custom" placeholder="e.g. Compost bin" style="flex:1;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
-    </div>
-    <div style="font-size:11px;color:#888;margin-bottom:6px;">Size (feet):  W = Width · L = Length</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-      <label style="font-size:12px;">W</label>
-      <input id="spacer-w" type="number" value="8" min="1" max="100" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
-      <label style="font-size:12px;">L</label>
-      <input id="spacer-h" type="number" value="8" min="1" max="100" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
-      <label style="font-size:12px;">Rotate°</label>
-      <input id="spacer-r" type="number" value="0" min="-180" max="180" style="width:60px;height:32px;border:1px solid #d0cfc8;border-radius:6px;padding:0 8px;font-size:12px;">
-    </div>
-    <div style="display:flex;gap:6px;">
-      <button onclick="placeCustomSpacer()" style="flex:1;height:32px;background:#2d5a1b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Add Custom</button>
-    </div>
-    <button onclick="document.getElementById('spacer-picker').remove()" style="margin-top:10px;width:100%;height:30px;border:1px solid #d0cfc8;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:#888;">Cancel</button>`;
-  document.body.appendChild(picker);
+  `).join('');
 }
 
-function placeSpacer(typeIdx){
-  const t = SPACER_TYPES[typeIdx];
-  const w = parseFloat(document.getElementById('spacer-w')?.value)||t.w;
-  const h = parseFloat(document.getElementById('spacer-h')?.value)||t.h;
-  const r = parseFloat(document.getElementById('spacer-r')?.value)||0;
-  _doPlaceSpacer(t.label, t.color, w, h, r);
+function toggleCard(i) {
+  document.getElementById('body-' + i).classList.toggle('open');
+  document.getElementById('hdr-' + i).classList.toggle('open');
+  document.getElementById('chev-' + i).classList.toggle('open');
 }
 
-function placeCustomSpacer(){
-  const label = document.getElementById('spacer-custom').value.trim() || 'Object';
-  const w = parseFloat(document.getElementById('spacer-w')?.value)||4;
-  const h = parseFloat(document.getElementById('spacer-h')?.value)||4;
-  const r = parseFloat(document.getElementById('spacer-r')?.value)||0;
-  _doPlaceSpacer(label, '#999', w, h, r);
+function deletePlant(i) {
+  if (!confirm('Remove ' + savedPlants[i].common + ' from the library?')) return;
+  savedPlants.splice(i, 1);
+  updateBadge();
+  renderLibrary();
+  showToast('Plant removed');
 }
 
-function _doPlaceSpacer(label, color, w, h, rotation=0){
-  const picker = document.getElementById('spacer-picker');
-  if(picker) picker.remove();
-  const g = garden(); if(!g) return;
-  if(!g.placed) g.placed = [];
-  // Place in center of garden
-  const cx = g.w/2, cy = g.d/2;
-  g.placed.push({type:'spacer', label, color, w, h, x:cx, y:cy, rotation:rotation||0, locked:false});
-  selectedIdx = g.placed.length - 1;
-  updatePlacedList(); renderCanvas(); scheduleSave();
+// ── CSV Export ──
+function csvEscape(val) {
+  if (val == null) return '';
+  const s = String(val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
 }
 
-function showPlantInfo(pid){
-  const p=PLANTS.find(x=>x.id===pid);if(!p)return;
-  const fmt=i=>i>=12?(i/12).toFixed(1).replace('.0','')+"'":i+'"';
-  document.getElementById('plant-detail').innerHTML=`
-    ${p.img?`<img class="pd-img" src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`:'' }
-    <div class="pd-name">${p.name}</div><div class="pd-sci">${p.sci}</div>
-    <div class="pd-row"><span class="pd-label">Height</span><span class="pd-val">${fmt(p.tall)}</span></div>
-    <div class="pd-row"><span class="pd-label">Width</span><span class="pd-val">${fmt(p.wide)}</span></div>
-    <div class="pd-row"><span class="pd-label">Sunlight</span><span class="pd-val">${p.sun}</span></div>
-    <div class="pd-row"><span class="pd-label">Bloom</span><span class="pd-val">${p.bloom||'—'}</span></div>
-    <div class="pd-row"><span class="pd-label">Zones</span><span class="pd-val">${p.zones}</span></div>
-    <div class="pd-row"><span class="pd-label">Soil</span><span class="pd-val">${p.soil}</span></div>
-    <div class="pd-row"><span class="pd-label">Spread</span><span class="pd-val">${p.spread}</span></div>
-    <div class="pd-row"><span class="pd-label">Roots</span><span class="pd-val">${p.root}</span></div>
-    <div class="pd-row"><span class="pd-label">Propagation</span><span class="pd-val">${p.propagation||'—'}</span></div>
-    <div class="pd-desc">${p.desc}</div>`;
+function exportCSV() {
+  if (savedPlants.length === 0) { showToast('No plants to export'); return; }
+
+  // Main data sheet
+  const headers = ['Plant ID','Common Name','Scientific Name','Size - Tall','Size - Wide',
+    'Root System','Spread / Growth Habit','Soil Type / Preferences','Propagation',
+    'Sunlight','Bloom Period','USDA Zones','Native to','Description / Ecological Role',
+    'Plant Image URL','Seedling Image URL'];
+  const rows = savedPlants.map(p => [
+    p.id, p.common, p.sci, p.tall, p.wide, p.root, p.spread,
+    p.soil, p.prop, p.sun, p.bloom, p.zones, p.native, p.desc,
+    '', ''
+  ].map(csvEscape).join(','));
+
+  // Summary block appended at bottom
+  const today = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+  const summary = [
+    '',
+    '--- EXPORT SUMMARY ---',
+    'Export Date,' + today,
+    'Total Plants,' + savedPlants.length,
+    'Plants with Plant Image,' + savedPlants.filter(p => p.imgPlant).length,
+    'Plants with Seedling Image,' + savedPlants.filter(p => p.imgSeedling).length,
+    '',
+    'PLANT LIST (Common Name | Scientific Name)',
+    ...savedPlants.map((p, i) => `${i+1}. ${p.common},${p.sci}`)
+  ];
+
+  const csv = [headers.join(','), ...rows, ...summary].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'native_plants_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exported — ' + savedPlants.length + ' plant' + (savedPlants.length !== 1 ? 's' : '') + ' + summary');
 }
-
-function cleanupStacked(){
-  if(!appReady||!garden()) return;
-  const g=garden();
-  const before=g.placed.length;
-  // Remove plants at exactly x=0,y=0 or within 0.5ft of origin (stacked/unplaced)
-  g.placed=g.placed.filter(item=>{
-    if(item.type==='spacer') return true;
-    return !(item.x<0.5 && item.y<0.5);
-  });
-  const removed=before-g.placed.length;
-  if(removed>0){
-    selectedIdx=null;
-    renderCanvas(); updatePlacedList(); scheduleSave();
-    alert('Removed '+removed+' stacked plant'+(removed>1?'s':'')+' from the top-left corner.');
-  } else {
-    alert('No stacked plants found.');
-  }
-}
-
-function resetPoints(){
-  if(!appReady||!garden()) return;
-  const g=garden();
-  if(!confirm('Reset to a clean 4-corner rectangle? Your plants stay, only the shape outline is reset.')) return;
-  // Always use garden W and D for a clean rectangle in feet
-  g.shape='rect';
-  g.polygon=null;
-  renderCanvas();
-  scheduleSave();
-}
-
-function resetShape(){
-  if(!appReady||!garden()) return;
-  const g=garden();
-  if(!confirm('Reset bed "'+g.name+'" back to a rectangle? Plants will stay, only the shape resets.')) return;
-  g.shape='rect';
-  g.polygon=null;
-  renderCanvas();
-  scheduleSave();
-}
-
-function clearGarden(){
-  if(!appReady) return;
-  if(!confirm('Remove all plants from "'+garden().name+'"?')) return;
-  garden().placed=[];selectedIdx=null;renderCanvas();updatePlacedList();scheduleSave();
-}
-
-function exportPNG(){
-  const g = garden();
-  if (!g) return;
-  const { plants, spacers } = getPlantCounts(g);
-
-  // ── Page dimensions: 8.5x11 at 96dpi = 816x1056px ──
-  const PAGE_W = 816;
-  const PAGE_H = 1056;
-  const MARGIN = 36;
-  const INNER_W = PAGE_W - MARGIN * 2;
-
-  // ── Header ──
-  const HEADER_H = 52;
-
-  // ── Garden drawing: scale to fit width, max 55% of page height ──
-  const cw = canvas.width / (window.devicePixelRatio || 1);
-  const ch = canvas.height / (window.devicePixelRatio || 1);
-  const gardenScale = Math.min(INNER_W / cw, (PAGE_H * 0.55) / ch);
-  const gardenW = Math.round(cw * gardenScale);
-  const gardenH = Math.round(ch * gardenScale);
-  const gardenX = MARGIN + (INNER_W - gardenW) / 2;
-  const gardenY = MARGIN + HEADER_H + 12;
-
-  // ── Plant list: 3 columns below garden ──
-  const LIST_TOP = gardenY + gardenH + 20;
-  const COLS = 3;
-  const COL_GAP = 14;
-  const COL_W = (INNER_W - COL_GAP * (COLS - 1)) / COLS;
-  const LINE_H = 20;
-  const BADGE_W = 26;
-
-  // Build all rows: plants then spacers
-  const allRows = plants.map(({name, count}) => ({name, count, isSpacer: false}));
-  if (spacers.length) {
-    allRows.push({name: '— Spacers —', count: null, isSpacer: true, isHeader: true});
-    spacers.forEach(({label}) => allRows.push({name: label, count: null, isSpacer: true}));
-  }
-
-  // How tall is the list section?
-  const rowsPerCol = Math.ceil(allRows.length / COLS);
-  const LIST_H = rowsPerCol * LINE_H + 28; // 28 = sub-header
-
-  const totalH = Math.min(PAGE_H, LIST_TOP + LIST_H + MARGIN);
-
-  // ── Create output canvas ──
-  const out = document.createElement('canvas');
-  out.width = PAGE_W;
-  out.height = totalH;
-  const ctx = out.getContext('2d');
-
-  // Page background
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, PAGE_W, totalH);
-
-  // ── Page header bar ──
-  ctx.fillStyle = '#2d5a1b';
-  ctx.fillRect(0, 0, PAGE_W, HEADER_H);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 18px Georgia, serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🌿 ' + g.name, MARGIN, HEADER_H * 0.42);
-  ctx.font = '11px sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  const totalPlants = plants.reduce((s, p) => s + p.count, 0);
-  ctx.fillText(
-    totalPlants + ' plants · ' + plants.length + ' variet' + (plants.length === 1 ? 'y' : 'ies') +
-    (spacers.length ? ' · ' + spacers.length + ' spacer' + (spacers.length !== 1 ? 's' : '') : '') +
-    '   ·   My Native Garden Planner',
-    MARGIN, HEADER_H * 0.72
-  );
-
-  // ── Garden drawing ──
-  // Subtle shadow
-  ctx.shadowColor = 'rgba(0,0,0,0.10)';
-  ctx.shadowBlur = 8;
-  ctx.shadowOffsetX = 2;
-  ctx.shadowOffsetY = 2;
-  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, gardenX, gardenY, gardenW, gardenH);
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
-
-  // Border around garden
-  ctx.strokeStyle = '#c8d8c8';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(gardenX, gardenY, gardenW, gardenH);
-
-  // ── Plant list section ──
-  // Section header
-  ctx.fillStyle = '#e8ede8';
-  ctx.fillRect(MARGIN, LIST_TOP - 2, INNER_W, 1);
-  ctx.fillStyle = '#2d5a1b';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('PLANT LIST', MARGIN, LIST_TOP + 13);
-  ctx.fillStyle = '#aaaaaa';
-  ctx.font = '10px sans-serif';
-  ctx.fillText('sorted alphabetically by variety', MARGIN + 82, LIST_TOP + 13);
-
-  // Divider under section header
-  ctx.fillStyle = '#e8ede8';
-  ctx.fillRect(MARGIN, LIST_TOP + 18, INNER_W, 1);
-
-  // Distribute rows across columns
-  const colStart = LIST_TOP + 28;
-  allRows.forEach((row, i) => {
-    const col = Math.floor(i / rowsPerCol);
-    const rowInCol = i % rowsPerCol;
-    const x = MARGIN + col * (COL_W + COL_GAP);
-    const y = colStart + rowInCol * LINE_H;
-
-    if (col >= COLS) return; // safety
-
-    if (row.isHeader) {
-      // Spacer section label
-      ctx.fillStyle = '#aaaaaa';
-      ctx.font = '600 9px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('SPACERS', x + 4, y + 11);
-      return;
-    }
-
-    // Alternating row background
-    if (i % 2 === 0) {
-      ctx.fillStyle = '#f6fbf6';
-      ctx.fillRect(x, y, COL_W, LINE_H - 1);
-    }
-
-    if (row.count != null) {
-      // Count badge
-      ctx.fillStyle = '#2d5a1b';
-      ctx.beginPath();
-      if (ctx.roundRect) {
-        ctx.roundRect(x + 3, y + 4, BADGE_W, 13, 6);
-      } else {
-        ctx.rect(x + 3, y + 4, BADGE_W, 13);
-      }
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(row.count, x + 3 + BADGE_W / 2, y + 13);
-      // Plant name
-      ctx.fillStyle = '#1a3a0a';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left';
-      let pname = row.name;
-      const maxW = COL_W - BADGE_W - 12;
-      while (ctx.measureText(pname).width > maxW && pname.length > 3) pname = pname.slice(0, -1);
-      if (pname !== row.name) pname += '…';
-      ctx.fillText(pname, x + BADGE_W + 8, y + 13);
-    } else {
-      // Spacer item
-      ctx.fillStyle = '#888888';
-      ctx.font = '11px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('• ' + row.name, x + 6, y + 13);
-    }
-  });
-
-  // ── Footer ──
-  ctx.fillStyle = '#e8ede8';
-  ctx.fillRect(0, totalH - 22, PAGE_W, 1);
-  ctx.fillStyle = '#bbbbbb';
-  ctx.font = '9px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Generated by My Native Garden Planner · mynativegardenplanner.com · ' + new Date().toLocaleDateString(), PAGE_W / 2, totalH - 11);
-
-  // ── Download ──
-  const link = document.createElement('a');
-  link.download = g.name.replace(/\s+/g, '-') + '-plan.png';
-  link.href = out.toDataURL('image/png');
-  link.click();
-}
-
-// Auth handles initGardens() and loadPlants() calls
-
-// Expose ALL functions to global scope (required for onclick= attributes with type="module")
-window.doLogin = doLogin;
-window.doSignup = doSignup;
-window.doGoogleLogin = doGoogleLogin;
-window.doForgot = doForgot;
-window.doSignOut = doSignOut;
-window.showLogin = showLogin;
-window.showSignup = showSignup;
-window.showForgot = showForgot;
-window.addGarden = addGarden;
-window.deleteGarden = deleteGarden;
-window.clearGarden = clearGarden;
-window.applyBedSettings = applyBedSettings;
-window.changeZoom = changeZoom;
-window.fitZoom = fitZoom;
-window.exportPNG = exportPNG;
-window.loadPlants = loadPlants;
-window.setFilter = setFilter;
-window.removeUnknownPlants = removeUnknownPlants;
-window.showToast = showToast;
-window.setTool = setTool;
-window.addSpacer = addSpacer;
-window.cleanupStacked = cleanupStacked;
-window.resetShape = resetShape;
-window.resetPoints = resetPoints;
-window.finishPoly = finishPoly;
-window.placeSpacer = placeSpacer;
-window.placeCustomSpacer = placeCustomSpacer;
-window.toggleLock = toggleLock;
-
 </script>
 </body>
 </html>
