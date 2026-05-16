@@ -568,7 +568,11 @@ function parseSize(s){
   if(!s) return 18;
   const nums=(s.match(/([\d.]+)/g)||[]).map(Number).filter(n=>n>0);
   if(!nums.length) return 18;
-  return Math.round(nums.reduce((a,b)=>a+b,0)/nums.length*(s.toLowerCase().includes('ft')||s.includes("'")?12:1));
+  const avg = nums.reduce((a,b)=>a+b,0)/nums.length;
+  const sl = s.toLowerCase();
+  // Detect feet: ft, feet, foot, ' symbol
+  const isFeet = sl.includes('ft') || sl.includes('feet') || sl.includes('foot') || s.includes("'");
+  return Math.round(avg * (isFeet ? 12 : 1));
 }
 
 function norm(r){
